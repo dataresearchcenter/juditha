@@ -1,42 +1,29 @@
-import os
-from typing import Any
-
-from banal import as_bool
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def get_env(env: str, default: Any | None = None) -> Any | None:
-    return os.environ.get(env, default)
+class ApiContact(BaseSettings):
+    name: str = "Data and Research Center – DARC"
+    url: str = "https://github.com/dataresearchcenter/juditha/"
+    email: str = "hi@dataresearchcenter.org"
 
 
-DEBUG = as_bool(get_env("DEBUG", 0))
-REDIS_URL = get_env("REDIS_URL", "redis://localhost:6379")
-REDIS_PREFIX = get_env("REDIS_PREFIX", "juditha")
+class ApiSettings(BaseSettings):
+    title: str = "Juditha"
+    contact: ApiContact = ApiContact()
+    description_uri: str = "README.md"
 
-JUDITHA_CONFIG = get_env("JUDITHA_CONFIG")
-JUDITHA = get_env("JUDITHA")
-FUZZY_THRESHOLD = float(get_env("FUZZY_THRESHOLD", 0.97))
 
-# Api documentation render
-TITLE = os.environ.get("TITLE", "Juditha")
-CONTACT = {
-    "name": os.environ.get("CONTACT_AUTHOR", "Simon Wörpel"),
-    "url": os.environ.get(
-        "CONTACT_URL", "https://github.com/investigativedata/juditha/"
-    ),
-    "email": os.environ.get("CONTACT_EMAIL", "hi@investigativedata.org"),
-}
-DESCRIPTION = """
-Super fast canonical name lookup. Just do head requests to check if a name is
-known:
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="juditha_",
+        env_nested_delimiter="_",
+        nested_model_default_partial_update=True,
+    )
 
-    curl -I "http://localhost:8000/Berlin"
-    HTTP/1.1 200 OK
+    debug: bool = Field(alias="debug", default=False)
+    uri: str = Field(default="./juditha.db")
+    fuzzy_threshold: float = 0.97
+    limit: int = 10
 
-    curl -I "http://localhost:8000/Bayern"
-    HTTP/1.1 404 Not Found
-
-To get the actual canonized value, do a GET request:
-
-    curl "http://localhost:8000/berlin"
-    "Berlin"
-"""
+    api: ApiSettings = ApiSettings()

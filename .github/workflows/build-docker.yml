@@ -18,7 +18,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/investigativedata/juditha
+          images: ghcr.io/dataresearchcenter/juditha
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}

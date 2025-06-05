@@ -1,8 +1,7 @@
-FROM ghcr.io/investigativedata/ftm-docker:latest
+FROM ghcr.io/dataresearchcenter/ftmq:latest
 
 COPY juditha /app/juditha
 COPY setup.py /app/setup.py
-COPY setup.cfg /app/setup.cfg
 COPY pyproject.toml /app/pyproject.toml
 COPY VERSION /app/VERSION
 COPY README.md /app/README.md

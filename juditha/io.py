@@ -1,64 +1,53 @@
-import logging
-
-from ftmq.io import smart_read, smart_read_proxies
+from anystore.io import logged_items, smart_stream
+from ftmq import Query
+from ftmq.io import smart_stream_proxies
 from ftmq.model.dataset import Catalog, Dataset
-from pantomime.types import FTM
 
-from juditha.store import get_store
+from juditha.logging import get_logger
+from juditha.store import Doc, Store, get_store
 
-log = logging.getLogger(__name__)
-
-
-def load_proxies(uri: str, with_schema: bool | None = False) -> int:
-    store = get_store()
-    ix = 0
-    for proxy in smart_read_proxies(uri):
-        store.index_proxy(proxy, with_schema=with_schema)
-        ix += 1
-        if ix % 10_000 == 0:
-            log.info("Loading proxy %d ..." % ix)
-    return ix
+log = get_logger(__name__)
 
 
-def _load_dataset(dataset: Dataset, with_schema: bool | None = False) -> int:
-    store = get_store()
-    ix = 0
-    names_seen = False
-    if not with_schema:
-        for resource in dataset.resources:
-            if resource.name == "names.txt":
-                names_seen = True
-                for name in smart_read(resource.url, stream=True, mode="r"):
-                    store.index(name)
-                    ix += 1
-                    if ix % 10_000 == 0:
-                        log.info(f"[{dataset.name}] Loading name %d ..." % ix)
-    if not names_seen:
-        # use entities
-        for resource in dataset.resources:
-            if resource.mime_type == FTM:
-                ix += load_proxies(resource.url, with_schema=with_schema)
-    return ix
+Q = Query().where(schema="LegalEntity", schema_include_descendants=True)
 
 
-def load_dataset(uri: str, with_schema: bool | None = False) -> int:
-    dataset = Dataset.from_uri(uri)
+def load_proxies(uri: str, store: Store | None = None) -> None:
+    with store or get_store() as store:
+        for proxy in logged_items(
+            Q.apply_iter(smart_stream_proxies(uri)),
+            "Load",
+            item_name="Proxy",
+            logger=log,
+            uri=uri,
+        ):
+            store.put(Doc.from_proxy(proxy))
+
+
+def load_dataset(uri: str, store: Store | None = None) -> None:
+    dataset = Dataset._from_uri(uri)
     log.info(f"[{dataset.name}] Loading ...")
-    return _load_dataset(dataset, with_schema=with_schema)
+    with store or get_store() as store:
+        for proxy in logged_items(
+            Q.apply_iter(dataset.iterate()),
+            "Load",
+            item_name="Proxy",
+            logger=log,
+            dataset=dataset.name,
+        ):
+            store.put(Doc.from_proxy(proxy))
 
 
-def load_catalog(uri: str, with_schema: bool | None = False) -> int:
-    catalog = Catalog.from_uri(uri)
-    ix = 0
+def load_catalog(uri: str, store: Store | None = None) -> None:
+    catalog = Catalog._from_uri(uri)
     for dataset in catalog.datasets:
-        ix += _load_dataset(dataset, with_schema=with_schema)
-    return ix
+        load_dataset(dataset.uri, store)
 
 
-def load_names(uri: str) -> int:
-    store = get_store()
-    for ix, name in enumerate(smart_read(uri, stream=True), 1):
-        store.index(name)
-        if ix % 10_000 == 0:
-            log.info("Loading name %d ..." % ix)
-    return ix
+def load_names(uri: str, store: Store | None = None) -> None:
+    with store or get_store() as store:
+        for name in logged_items(
+            smart_stream(uri), "Load", item_name="Name", logger=log, uri=uri
+        ):
+            name = name.strip()
+            store.put(Doc(caption=name, names=[name]))
