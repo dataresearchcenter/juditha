@@ -1,4 +1,6 @@
-redis_data*
+data
+nomenklatura.db
+juditha.db*
 .pypirc
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -46,6 +48,7 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+*.lcov
 nosetests.xml
 coverage.xml
 *.cover

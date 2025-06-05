@@ -13,7 +13,7 @@ typecheck:
 	poetry run mypy --strict juditha
 
 test:
-	poetry run pytest -v --capture=sys --cov=juditha --cov-report term-missing
+	poetry run pytest -v --capture=sys --cov=juditha --cov-report lcov -v
 
 build:
 	poetry run build
@@ -29,5 +29,5 @@ clean:
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 
-redis:
-	docker run -p 6379:6379 redis:alpine
+api:
+	uvicorn juditha.api:app --reload --port 5000

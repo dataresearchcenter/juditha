@@ -1,21 +1,4 @@
-from juditha.clean import normalize
-from juditha.match import Match
-from juditha.settings import FUZZY_THRESHOLD
-from juditha.store import classify, get_store, lookup
-
-
-class Juditha:
-    def __init__(self, url: str) -> None:
-        self.store = get_store(juditha_url=url)
-
-    def lookup(
-        self, name: str, threshold: float | None = FUZZY_THRESHOLD
-    ) -> Match | None:
-        return self.store.lookup(name, threshold=threshold)
-
-    def classify(self, name: str) -> str | None:
-        return self.store.classify(name)
-
+from juditha.store import lookup
 
 __version__ = "0.0.4"
-__all__ = ["lookup", "classify", "normalize"]
+__all__ = ["lookup"]

@@ -1,29 +1,28 @@
-[tool.poetry]
+[project]
 name = "juditha"
 version = "0.0.4"
 description = "A super-fast canonical name lookup service"
-authors = ["Simon Wörpel <simon@investigativedata.org>"]
-license = "GPL"
+authors = [{ name = "Simon Wörpel", email = "simon.woerpel@pm.me" }]
+license = "AGPLv3+"
 readme = "README.md"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.11,<4"
+dependencies = [
+    "ftmq (>=0.8.5,<0.9.0)",
+    "fastapi (>=0.115.12,<0.116.0)",
+    "tantivy (>=0.24.0,<0.25.0)",
+    "jellyfish (>=1.2.0,<2.0.0)",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 juditha = "juditha.cli:cli"
-
-[tool.poetry.dependencies]
-python = ">3.11,<3.12"
-ftmq = "^0.5.1"
-fastapi = "^0.108.0"
-redis = "^5.0.1"
-fakeredis = "^2.20.1"
-typer = "^0.9.0"
-rich = "^13.7.0"
-uvicorn = "^0.25.0"
-alephclient = "^2.3.6"
-requests = "^2.31.0"
-nltk = "^3.8.1"
-spacy = "^3.7.2"
-pydantic = "^2.5.3"
-spaczz = "^0.6.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"
@@ -34,17 +33,14 @@ bump2version = "^1.0.1"
 pytest = "^7.4.2"
 pytest-coverage = "^0.0"
 pytest-env = "^1.0.1"
-httpx = "^0.25.0"
+httpx = ">=0.25.0"
 mypy = "^1.5.1"
+uvicorn = "^0.34.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-
-[tool.pytest.ini_options]
-env = [
-    "DEBUG=1",
-    "STORE_CONFIG=tests/fixtures/store.yml",
-    "FUZZY=true"
-]
+[tool.pytest_env]
+DEBUG = 1
+JUDITHA_URI = "memory://"
