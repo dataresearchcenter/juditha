@@ -43,7 +43,7 @@ jobs:
         path: ~/.cache/pre-commit
         key: pre-commit-${{ runner.os }}-${{ env.PY }}-${{ hashFiles('.pre-commit-config.yaml') }}
     - name: Install dependencies
-      run: poetry install --with dev
+      run: poetry install --with dev --all-extras
     - name: Run pre-commit hooks
       run: poetry run pre-commit run
     - name: Lint with flake8

@@ -8,7 +8,7 @@ COPY README.md /app/README.md
 
 WORKDIR /app
 RUN pip install gunicorn uvicorn
-RUN pip install .
+RUN pip install ".[api]"
 
 USER 1000
 
