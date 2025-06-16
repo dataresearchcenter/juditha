@@ -14,16 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      # matrix:
-      #   python-version: ["3.11", "3.12"]
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
     - uses: actions/checkout@v4
-    # - name: Set up Python ${{ matrix.python-version }}
-    - name: Set up Python 3.11
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: 3.11
+        python-version: ${{ matrix.python-version }}
     - name: Install poetry
       run: curl -sSL https://install.python-poetry.org | python3 -
     - name: Configure poetry
@@ -44,7 +43,7 @@ jobs:
         path: ~/.cache/pre-commit
         key: pre-commit-${{ runner.os }}-${{ env.PY }}-${{ hashFiles('.pre-commit-config.yaml') }}
     - name: Install dependencies
-      run: poetry install --with dev
+      run: poetry install --with dev --all-extras
     - name: Run pre-commit hooks
       run: poetry run pre-commit run
     - name: Lint with flake8
@@ -55,9 +54,9 @@ jobs:
       run: poetry build
     - name: Coveralls
       uses: coverallsapp/github-action@v2
-      # with:
-      #   flag-name: run-${{ matrix.python-version }}
-      #   parallel: true
+      with:
+        flag-name: run-${{ matrix.python-version }}
+        parallel: true
 
   finish:
     needs: test
@@ -66,6 +65,6 @@ jobs:
     steps:
     - name: Coveralls Finished
       uses: coverallsapp/github-action@v2
-      # with:
-      #   parallel-finished: true
-      #   carryforward: "run-3.10,run-3.11"
+      with:
+        parallel-finished: true
+        carryforward: "run-3.11,run-3.12,run-3.13"
