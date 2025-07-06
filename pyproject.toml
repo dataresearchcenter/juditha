@@ -29,14 +29,14 @@ juditha = "juditha.cli:cli"
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
 isort = "^6.0.1"
-flake8 = "^7.2.0"
+flake8 = "^7.3.0"
 pre-commit = "^4.2.0"
 bump2version = "^1.0.1"
 pytest = "^8.4.1"
 pytest-coverage = "^0.0"
 pytest-env = "^1.0.1"
 httpx = ">=0.25.0"
-mypy = "^1.5.1"
+mypy = "^1.16.1"
 uvicorn = "^0.35.0"
 
 [build-system]
