@@ -37,7 +37,7 @@ pytest-coverage = "^0.0"
 pytest-env = "^1.0.1"
 httpx = ">=0.25.0"
 mypy = "^1.5.1"
-uvicorn = "^0.34.2"
+uvicorn = "^0.35.0"
 
 [build-system]
 requires = ["poetry-core"]
