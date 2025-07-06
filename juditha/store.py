@@ -47,13 +47,20 @@ class Doc(BaseModel):
 
 class Result(BaseModel):
     name: str
+    names: list[str]
     query: str
     score: float
     schema_: str | None = Field(alias="schema", default=None)
 
     @classmethod
     def from_doc(cls, doc: Doc, q: str, score: float) -> Self:
-        return cls(name=doc.caption, query=q, score=score, schema=doc.schema_ or None)
+        return cls(
+            name=doc.caption,
+            names=doc.names,
+            query=q,
+            score=score,
+            schema=doc.schema_ or None,
+        )
 
 
 class Store:

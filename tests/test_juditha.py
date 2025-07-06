@@ -16,6 +16,8 @@ def test_io(fixtures_path, store):
     res = lookup(name)
     assert res.score > 0.97
     assert res.name == name
+    assert res.names == [name]
+    assert res.schema_ == "PublicBody"
 
     res2 = lookup(name.lower())
     assert res2.name == name
