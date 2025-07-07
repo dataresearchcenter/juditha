@@ -31,11 +31,13 @@ To match more fuzzy, reduce the threshold (default 0.97):
 ### from ftm entities
 
     cat entities.ftm.json | juditha load-entities
+    juditha build
 
 ### from anywhere
 
     juditha load-names -i s3://my_bucket/names.txt
     juditha load-entities -i https://data.ftm.store/eu_authorities/entities.ftm.json
+    juditha build
 
 ### a complete dataset or catalog
 
@@ -43,6 +45,7 @@ Following the [`nomenklatura`](https://github.com/opensanctions/nomenklatura) sp
 
     juditha load-dataset https://data.ftm.store/eu_authorities/index.json
     juditha load-catalog https://data.ftm.store/investigraph/catalog.json
+    juditha build
 
 ## use in python applications
 

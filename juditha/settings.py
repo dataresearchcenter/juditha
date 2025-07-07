@@ -1,6 +1,8 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_URI = "juditha.db"
+
 
 class ApiContact(BaseSettings):
     name: str = "Data and Research Center – DARC"
@@ -22,7 +24,7 @@ class Settings(BaseSettings):
     )
 
     debug: bool = Field(alias="debug", default=False)
-    uri: str = Field(default="./juditha.db")
+    uri: str = Field(default=DEFAULT_URI)
     fuzzy_threshold: float = 0.97
     limit: int = 10
 

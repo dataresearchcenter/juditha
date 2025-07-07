@@ -2,12 +2,14 @@ from typing import Annotated, Optional
 
 import typer
 from anystore.cli import ErrorHandler
+from anystore.io import smart_write_models
 from anystore.logging import configure_logging
 from rich import print
 
 from juditha import __version__, io
+from juditha.enricher import dbpedia
 from juditha.settings import Settings
-from juditha.store import lookup
+from juditha.store import get_store, lookup
 
 settings = Settings()
 
@@ -17,9 +19,15 @@ cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=settings.debug)
 @cli.callback(invoke_without_command=True)
 def cli_juditha(
     version: Annotated[Optional[bool], typer.Option(..., help="Show version")] = False,
+    settings: Annotated[
+        Optional[bool], typer.Option(..., help="Show current settings")
+    ] = False,
 ):
     if version:
         print(__version__)
+        raise typer.Exit()
+    if settings:
+        print(settings)
         raise typer.Exit()
     configure_logging()
 
@@ -71,7 +79,19 @@ def cli_lookup(
             print("[red]not found[/red]")
 
 
-@cli.command("settings")
-def cli_settings():
+@cli.command("build")
+def cli_build():
     with ErrorHandler():
-        print(settings)
+        store = get_store()
+        store.build()
+
+
+@cli.command("load-dbpedia")
+def cli_load_dbpedia(
+    in_uri: Annotated[str, typer.Option("-i", help="Input uri, default stdin")] = "-",
+    out_uri: Annotated[
+        str, typer.Option("-o", help="Output uri, default stdout")
+    ] = "-",
+):
+    """Generate Person entities from dbpedia persondata dumps"""
+    smart_write_models(out_uri, dbpedia.stream_dbpedia(in_uri))

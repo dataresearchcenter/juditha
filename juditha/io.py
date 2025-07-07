@@ -10,33 +10,34 @@ from juditha.store import Doc, Store, get_store
 log = get_logger(__name__)
 
 
-Q = Query().where(schema="LegalEntity", schema_include_descendants=True)
+DEFAULT_SCHEMA = "LegalEntity"
+Q = Query().where(schema=DEFAULT_SCHEMA, schema_include_descendants=True)
 
 
 def load_proxies(uri: Uri, store: Store | None = None) -> None:
-    with store or get_store() as store:
-        for proxy in logged_items(
-            Q.apply_iter(smart_read_proxies(uri)),
-            "Load",
-            item_name="Proxy",
-            logger=log,
-            uri=uri,
-        ):
-            store.put(Doc.from_proxy(proxy))
+    store = store or get_store()
+    entities = logged_items(
+        Q.apply_iter(smart_read_proxies(uri)),
+        "Load",
+        item_name="Proxy",
+        logger=log,
+        uri=uri,
+    )
+    store.aggregator.load_entities(entities)
 
 
 def load_dataset(uri: Uri, store: Store | None = None) -> None:
+    store = store or get_store()
     dataset = Dataset._from_uri(uri)
     log.info(f"[{dataset.name}] Loading ...")
-    with store or get_store() as store:
-        for proxy in logged_items(
-            Q.apply_iter(dataset.iterate()),
-            "Load",
-            item_name="Proxy",
-            logger=log,
-            dataset=dataset.name,
-        ):
-            store.put(Doc.from_proxy(proxy))
+    entities = logged_items(
+        Q.apply_iter(dataset.iterate()),
+        "Load",
+        item_name="Proxy",
+        logger=log,
+        dataset=dataset.name,
+    )
+    store.aggregator.load_entities(entities)
 
 
 def load_catalog(uri: Uri, store: Store | None = None) -> None:
@@ -45,10 +46,10 @@ def load_catalog(uri: Uri, store: Store | None = None) -> None:
         load_dataset(dataset.uri, store)
 
 
-def load_names(uri: Uri, store: Store | None = None) -> None:
+def load_names(uri: Uri, store: Store | None = None, schema: str | None = None) -> None:
     with store or get_store() as store:
         for name in logged_items(
             smart_stream(uri), "Load", item_name="Name", logger=log, uri=uri
         ):
             name = name.strip()
-            store.put(Doc(caption=name, names=[name]))
+            store.put(Doc(caption=name, names={name}, schema=schema or ""))

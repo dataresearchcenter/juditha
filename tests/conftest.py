@@ -20,5 +20,4 @@ def eu_authorities():
 
 @pytest.fixture()
 def store(tmp_path):
-    # return get_store(str(tmp_path / "juditha"))
-    return get_store()
+    return get_store(str(tmp_path / "juditha"))
