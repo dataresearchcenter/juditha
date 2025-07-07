@@ -1,10 +1,10 @@
 from anystore.io import logged_items, smart_stream
+from anystore.logging import get_logger
 from anystore.types import Uri
 from ftmq import Query
 from ftmq.io import smart_read_proxies
 from ftmq.model.dataset import Catalog, Dataset
 
-from juditha.logging import get_logger
 from juditha.store import Doc, Store, get_store
 
 log = get_logger(__name__)

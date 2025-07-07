@@ -2,10 +2,10 @@ from typing import Annotated, Optional
 
 import typer
 from anystore.cli import ErrorHandler
+from anystore.logging import configure_logging
 from rich import print
 
 from juditha import __version__, io
-from juditha.logging import configure_logging
 from juditha.settings import Settings
 from juditha.store import lookup
 

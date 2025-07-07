@@ -5,13 +5,13 @@ from typing import Generator, Self
 
 import jellyfish
 import tantivy
+from anystore.logging import get_logger
 from anystore.util import model_dump
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 from pydantic import BaseModel, Field
 from rapidfuzz import process
 
-from juditha.logging import get_logger
 from juditha.settings import Settings
 
 NUM_CPU = multiprocessing.cpu_count()
