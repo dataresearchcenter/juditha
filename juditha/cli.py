@@ -25,7 +25,7 @@ def cli_juditha(
         print(__version__)
         raise typer.Exit()
     if settings:
-        print(settings)
+        print(Settings())
         raise typer.Exit()
     configure_logging()
 
