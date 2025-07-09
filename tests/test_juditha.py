@@ -18,13 +18,14 @@ def test_io(fixtures_path, store):
     res = lookup(name, uri=store.uri)
     assert res is not None
     assert res.score > 0.97
-    assert res.name == name
+    assert res.caption == name
     assert res.names == {name}
-    assert res.schema_ == "PublicBody"
+    assert res.schemata == {"PublicBody"}
+    assert res.common_schema == "PublicBody"
 
     res2 = lookup(name.lower(), uri=store.uri)
     assert res2 is not None
-    assert res2.name == name
+    assert res2.caption == name
     assert res2.query == name.lower()
     assert res2.score == res.score
 
@@ -50,8 +51,8 @@ def test_api(monkeypatch, fixtures_path, store):
 
     res = client.get("/European?threshold=0.5")
     assert res.json()["query"] == "European"
-    assert "European" in res.json()["name"]  # FIXME
-    assert res.json()["schema"] == "PublicBody"
+    assert "European" in res.json()["caption"]  # FIXME
+    assert res.json()["schemata"] == ["PublicBody"]
     assert res.json()["score"] > 0.5
 
     res = client.head("/shdfjkoshfaj")

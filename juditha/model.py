@@ -1,41 +1,56 @@
+import itertools
+from functools import cache
 from typing import Generator, Self, TypeAlias
 
-from followthemoney.proxy import EntityProxy
-from followthemoney.types import registry
-from pydantic import BaseModel, Field
+from followthemoney import model
+from followthemoney.exc import InvalidData
+from pydantic import BaseModel
+
+
+@cache
+def get_common_schema(*schemata: str) -> str:
+    if len(schemata) == 1:
+        for s in schemata:
+            return s
+    _schemata: set[str] = set()
+    for pair in itertools.pairwise(schemata):
+        try:
+            s = model.common_schema(*pair)
+            _schemata.add(s.name)
+        except InvalidData:
+            pass
+    if _schemata:
+        return get_common_schema(*_schemata)
+    return "LegalEntity"
 
 
 class Doc(BaseModel):
     caption: str
     names: set[str] = set()
-    schema_: str = Field(alias="schema", default="")
+    schemata: set[str] = set()
     score: float = 0
-
-    @classmethod
-    def from_proxy(cls, proxy: EntityProxy) -> Self:
-        return cls(
-            caption=proxy.caption,
-            names=set(proxy.get_type_values(registry.name)),
-            schema=proxy.schema.name,
-        )
 
 
 Docs: TypeAlias = Generator[Doc, None, None]
 
 
 class Result(BaseModel):
-    name: str
+    caption: str
     names: set[str]
     query: str
     score: float
-    schema_: str | None = Field(alias="schema", default=None)
+    schemata: set[str] = set()
 
     @classmethod
     def from_doc(cls, doc: Doc, q: str, score: float) -> Self:
         return cls(
-            name=doc.caption,
+            caption=doc.caption,
             names=doc.names,
             query=q,
             score=score,
-            schema=doc.schema_ or None,
+            schemata=doc.schemata,
         )
+
+    @property
+    def common_schema(self) -> str:
+        return get_common_schema(*self.schemata)

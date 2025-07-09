@@ -14,7 +14,9 @@ DEFAULT_SCHEMA = "LegalEntity"
 Q = Query().where(schema=DEFAULT_SCHEMA, schema_include_descendants=True)
 
 
-def load_proxies(uri: Uri, store: Store | None = None) -> None:
+def load_proxies(
+    uri: Uri, store: Store | None = None, sync: bool | None = False
+) -> None:
     store = store or get_store()
     entities = logged_items(
         Q.apply_iter(smart_read_proxies(uri)),
@@ -24,9 +26,13 @@ def load_proxies(uri: Uri, store: Store | None = None) -> None:
         uri=uri,
     )
     store.aggregator.load_entities(entities)
+    if sync:
+        store.build()
 
 
-def load_dataset(uri: Uri, store: Store | None = None) -> None:
+def load_dataset(
+    uri: Uri, store: Store | None = None, sync: bool | None = False
+) -> None:
     store = store or get_store()
     dataset = Dataset._from_uri(uri)
     log.info(f"[{dataset.name}] Loading ...")
@@ -38,12 +44,19 @@ def load_dataset(uri: Uri, store: Store | None = None) -> None:
         dataset=dataset.name,
     )
     store.aggregator.load_entities(entities)
+    if sync:
+        store.build()
 
 
-def load_catalog(uri: Uri, store: Store | None = None) -> None:
+def load_catalog(
+    uri: Uri, store: Store | None = None, sync: bool | None = False
+) -> None:
+    store = store or get_store()
     catalog = Catalog._from_uri(uri)
     for dataset in catalog.datasets:
         load_dataset(dataset.uri, store)
+    if sync:
+        store.build()
 
 
 def load_names(uri: Uri, store: Store | None = None, schema: str | None = None) -> None:

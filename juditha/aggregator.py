@@ -6,72 +6,88 @@ want to canonize them all.
 """
 
 from functools import cache
-from typing import Generator, Iterable, Self, TypedDict
+from typing import Iterable, Self, TypedDict
 
 import duckdb
 import pandas as pd
-from followthemoney import EntityProxy
+from anystore.logging import get_logger
+from followthemoney import EntityProxy, registry
 from rigour.names import pick_name
 
 from juditha.model import Doc, Docs
+
+log = get_logger(__name__)
 
 
 @cache
 def make_table(uri: str) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(uri)
     con.sql(
-        "CREATE TABLE IF NOT EXISTS names (caption STRING, name STRING, schema STRING)"
+        "CREATE TABLE IF NOT EXISTS names (caption STRING, schema STRING, names STRING[])"
     )
     return con
 
 
 class Row(TypedDict):
     caption: str
-    name: str
+    names: set[str]
     schema: str
 
 
-def unpack_entity(e: EntityProxy) -> Generator[Row, None, None]:
+def unpack_entity(e: EntityProxy) -> Row | None:
     names: set[str] = set()
     names.update(e.get("name"))
-    names.update(e.get("alias"))
     caption = pick_name(list(names))
     if caption is not None:
-        for name in names:
-            yield {"caption": caption, "name": name, "schema": e.schema.name}
+        names.update(e.get("alias"))
+        return {"caption": caption, "schema": e.schema.name, "names": names}
 
 
 class Aggregator:
     def __init__(self, uri: str) -> None:
         self.uri = uri
-        self.table = make_table(uri)
-        self.batch: list[EntityProxy] = []
+        self.buffer: list[EntityProxy] = []
 
     def flush(self) -> None:
-        rows: Generator[Row, None, None] = (
-            r for e in self.batch for r in unpack_entity(e)
-        )
+        rows = filter(bool, map(unpack_entity, self.buffer))
         df = pd.DataFrame(rows)
+        df["names"] = df["names"].map(list)
         duckdb.register("df", df)
         self.table.execute("INSERT INTO names SELECT * FROM df")
-        self.batch = []
+        self.buffer = []
 
     def put(self, entity: EntityProxy) -> None:
-        self.batch.append(entity)
-        if len(self.batch) >= 10_000:
+        if not entity.get_type_values(registry.name):
+            return
+        self.buffer.append(entity)
+        if len(self.buffer) >= 10_000:
             self.flush()
 
     def iterate(self) -> Docs:
-        for caption, names, schema in self.table.sql(
-            "SELECT caption, list(name) AS names, schema FROM names "
-            "GROUP BY caption, schema ORDER BY caption"
-        ).fetchall():
-            yield Doc(caption=caption, names=names, schema=schema)
+        current_caption = None
+        schemata: set[str] = set()
+        names_: set[str] = set()
+        res = self.table.execute("SELECT * FROM names ORDER BY caption")
+        while rows := res.fetchmany(100_000):
+            for caption, schema, names in rows:
+                if current_caption is None:
+                    current_caption = caption
+                if current_caption != caption:
+                    yield Doc(caption=current_caption, names=names_, schemata=schemata)
+                    current_caption = caption
+                    names_ = set()
+                    schemata = set()
+                schemata.add(schema)
+                names_.update(names)
 
     def load_entities(self, entities: Iterable[EntityProxy]) -> None:
         with self:
             for entity in entities:
                 self.put(entity)
+
+    @property
+    def table(self) -> duckdb.DuckDBPyConnection:
+        return make_table(self.uri)
 
     @property
     def count(self) -> int:

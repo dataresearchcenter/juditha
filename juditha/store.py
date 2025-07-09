@@ -4,11 +4,13 @@ from typing import Generator, Self
 
 import jellyfish
 import tantivy
+from anystore.decorators import error_handler
 from anystore.io import logged_items
 from anystore.logging import get_logger
 from anystore.types import Uri
 from anystore.util import join_uri, model_dump, path_from_uri, rm_rf
 from rapidfuzz import process
+from rigour.names import Name
 
 from juditha.aggregator import Aggregator
 from juditha.model import Doc, Result
@@ -22,10 +24,15 @@ log = get_logger(__name__)
 settings = Settings()
 
 
+def clean_name(name: str) -> str:
+    n = Name(name)
+    return n.norm_form
+
+
 @cache
 def make_schema() -> tantivy.Schema:
     schema_builder = tantivy.SchemaBuilder()
-    schema_builder.add_text_field("schema", tokenizer_name="raw", stored=True)
+    schema_builder.add_text_field("schemata", tokenizer_name="raw", stored=True)
     schema_builder.add_text_field("caption", stored=True)
     schema_builder.add_text_field("names", stored=True)
     return schema_builder.build()
@@ -70,7 +77,7 @@ class Store:
 
     def build(self) -> None:
         if not self.uri.startswith("memory"):
-            uri = join_uri(self.uri, NAMES)
+            uri = join_uri(self.uri, INDEX)
             log.info("Cleaning up outdated store ...", uri=uri)
             rm_rf(uri)
         with self as store:
@@ -90,46 +97,52 @@ class Store:
         self.buffer = []
 
     def _search(
-        self, q: str, query: tantivy.Query, limit: int, threshold: float
+        self, q: str, clean_q: str, query: tantivy.Query, limit: int, threshold: float
     ) -> Generator[Result, None, None]:
         searcher = self.index.searcher()
         result = searcher.search(query, limit)
-        _q = q.lower()
+        docs: list[Doc] = []
         for item in result.hits:
             doc = searcher.doc(item[1])
             data = doc.to_dict()
             data["caption"] = doc.get_first("caption")
             data["schema"] = doc.get_first("schema")
             doc = Doc(**data)
-            score = jellyfish.jaro_similarity(_q, doc.caption.lower())
+            score = jellyfish.jaro_similarity(clean_q, doc.caption.lower())
             if score > threshold:
                 yield Result.from_doc(doc, q, score)
-            res = process.extractOne(_q, [n.lower() for n in doc.names])
+            else:
+                docs.append(doc)
+        # now try other names
+        for doc in docs:
+            res = process.extractOne(clean_q, [n.lower() for n in doc.names])
             if res is not None:
                 score = res[:2][1] / 100
                 if score > threshold:
                     yield Result.from_doc(doc, q, score)
 
+    @error_handler(max_retries=0)
     def search(
         self, q: str, threshold: float | None = None, limit: int | None = None
     ) -> Result | None:
         threshold = threshold or settings.fuzzy_threshold
         limit = limit or settings.limit
+        clean_q = clean_name(q)
 
         # 1. try exact
         query = self.index.parse_query(
-            f'"{q}"',
+            f'"{clean_q}"',
             field_boosts={"caption": 2},
         )
-        for res in self._search(q, query, limit, threshold):
+        for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
         # 2. more fuzzy
         # FIXME seems not to work
         query = tantivy.Query.fuzzy_term_query(
-            self.index.schema, "names", q, prefix=True
+            self.index.schema, "names", clean_q, prefix=True
         )
-        for res in self._search(q, query, limit, threshold):
+        for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
     def __enter__(self) -> Self:
