@@ -92,7 +92,15 @@ class Aggregator:
     @property
     def count(self) -> int:
         for (c,) in self.table.sql(
-            "SELECT COUNT(DISTINCT(caption, schema)) FROM names"
+            "SELECT COUNT(DISTINCT caption) FROM names"
+        ).fetchall():
+            return c
+        return 0
+
+    @property
+    def count_names(self) -> int:
+        for (c,) in self.table.sql(
+            "SELECT COUNT(DISTINCT names) FROM names"
         ).fetchall():
             return c
         return 0
