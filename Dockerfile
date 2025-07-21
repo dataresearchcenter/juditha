@@ -1,7 +1,5 @@
 FROM ghcr.io/dataresearchcenter/ftmq:latest
 
-RUN apt update -y && apt install -y git
-
 COPY juditha /app/juditha
 COPY setup.py /app/setup.py
 COPY pyproject.toml /app/pyproject.toml
