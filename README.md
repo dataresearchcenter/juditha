@@ -82,6 +82,9 @@ Tweak threshold (default: 0.97) via `?threshold=0.6`
 
 **Juditha Dommer** was the daughter of a coppersmith and raised seven children, while her husband Johann Pachelbel wrote a *canon*.
 
+## Versioning
+
+To mark the compatibility with [followthemoney](https://followthemoney.tech), `juditha` follows the same major version, which is currently 4.x.x.
 
 ## License and Copyright
 
