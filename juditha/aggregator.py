@@ -79,6 +79,9 @@ class Aggregator:
                     schemata = set()
                 schemata.add(schema)
                 names_.update(names)
+        # don't forget the last (or only) one
+        if current_caption:
+            yield Doc(caption=current_caption, names=names_, schemata=schemata)
 
     def load_entities(self, entities: Iterable[EntityProxy]) -> None:
         with self:
