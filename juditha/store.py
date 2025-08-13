@@ -15,10 +15,12 @@ from rigour.names import Name
 from juditha.aggregator import Aggregator
 from juditha.model import Doc, Result
 from juditha.settings import Settings
+from juditha.validate import Tag, Validator
 
 NUM_CPU = multiprocessing.cpu_count()
 INDEX = "tantivy.db"
 NAMES = "names.db"
+TOKENS = "tokens"
 
 log = get_logger(__name__)
 settings = Settings()
@@ -53,6 +55,13 @@ def ensure_index_path(uri: Uri) -> str:
     return str(path)
 
 
+@cache
+def ensure_tokens_path(uri: Uri) -> str:
+    path = path_from_uri(uri) / TOKENS
+    path.mkdir(exist_ok=True, parents=True)
+    return str(path)
+
+
 class Store:
     def __init__(self, uri: str | None):
         schema = make_schema()
@@ -62,9 +71,11 @@ class Store:
         if self.uri.startswith("memory"):
             self.index = tantivy.Index(schema)
             self.aggregator = Aggregator(":memory:")
+            self.validator = Validator("memory://", self.aggregator)
         else:
             self.index = tantivy.Index(schema, ensure_index_path(self.uri))
             self.aggregator = Aggregator(ensure_db_path(self.uri))
+            self.validator = Validator(ensure_tokens_path(self.uri), self.aggregator)
 
         self.buffer: list[tantivy.Document] = []
 
@@ -87,6 +98,8 @@ class Store:
                 self.aggregator, "Write", item_name="Doc", logger=log, total=count
             ):
                 store.put(doc)
+        # build validation tokens
+        _ = self.validator.get_tokens()
 
     def flush(self) -> None:
         writer = self.index.writer(heap_size=15000000 * NUM_CPU, num_threads=NUM_CPU)
@@ -150,6 +163,9 @@ class Store:
         for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
+    def validate(self, name: str, tag: Tag) -> bool:
+        return self.validator.validate_name(name, tag)
+
     def __enter__(self) -> Self:
         return self
 
@@ -169,3 +185,9 @@ def lookup(
 ) -> Result | None:
     store = get_store(uri)
     return store.search(q, threshold)
+
+
+@lru_cache(100_000)
+def validate_name(name: str, tag: Tag, uri: Uri | None = None) -> bool:
+    store = get_store(uri)
+    return store.validate(name, tag)
