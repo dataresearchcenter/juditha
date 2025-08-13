@@ -28,18 +28,15 @@ class Doc(BaseModel):
     caption: str
     names: set[str] = set()
     schemata: set[str] = set()
+    symbols: set[str] = set()
     score: float = 0
 
 
 Docs: TypeAlias = Generator[Doc, None, None]
 
 
-class Result(BaseModel):
-    caption: str
-    names: set[str]
+class Result(Doc):
     query: str
-    score: float
-    schemata: set[str] = set()
 
     @classmethod
     def from_doc(cls, doc: Doc, q: str, score: float) -> Self:
@@ -49,6 +46,7 @@ class Result(BaseModel):
             query=q,
             score=score,
             schemata=doc.schemata,
+            symbols=doc.symbols,
         )
 
     @property

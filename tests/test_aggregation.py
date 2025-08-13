@@ -14,10 +14,15 @@ def test_aggregation_entities(tmp_path, eu_authorities):
     assert doc.schemata == {"PublicBody"}
     assert aggregator.count == 153
     assert len([e for e in aggregator.iterate()]) == 153
+    names = list(aggregator.iter_names())
+    assert all(isinstance(x, str) for x in names)
+    assert len(names) == 153
 
     aggregator = Aggregator(tmp_path / "names2.db")
     aggregator.load_entities(eu_authorities[:1])
     assert len([e for e in aggregator.iterate()]) == 1
+    names = list(aggregator.iter_names())
+    assert len(names) == 1
 
 
 def test_aggregation_util():

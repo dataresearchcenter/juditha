@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi.testclient import TestClient
+from ftmq.util import make_entity
 from typer.testing import CliRunner
 
 from juditha import io, lookup
@@ -30,6 +30,16 @@ def test_io(fixtures_path, store):
 
     assert lookup("European", uri=store.uri) is None
     assert lookup("European", threshold=0.5, uri=store.uri) is not None
+
+    jane = make_entity(
+        {"id": "j", "schema": "Person", "properties": {"name": ["Jane Doe"]}}
+    )
+    store.aggregator.put(jane)
+    store.aggregator.flush()
+    store.build()
+    jane = lookup("Jane Doe", uri=store.uri)
+    assert jane is not None
+    assert "1682564" in jane.symbols
 
 
 def test_cli(monkeypatch, fixtures_path: Path, tmp_path):

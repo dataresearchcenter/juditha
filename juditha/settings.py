@@ -27,5 +27,6 @@ class Settings(BaseSettings):
     uri: str = Field(default=DEFAULT_URI)
     fuzzy_threshold: float = 0.97
     limit: int = 10
+    min_length: int = 4
 
     api: ApiSettings = ApiSettings()
