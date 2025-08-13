@@ -1,4 +1,11 @@
-[![juditha on pypi](https://img.shields.io/pypi/v/juditha)](https://pypi.org/project/juditha/) [![Python test and package](https://github.com/dataresearchcenter/juditha/actions/workflows/python.yml/badge.svg)](https://github.com/dataresearchcenter/juditha/actions/workflows/python.yml) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Coverage Status](https://coveralls.io/repos/github/dataresearchcenter/juditha/badge.svg?branch=main)](https://coveralls.io/github/dataresearchcenter/juditha?branch=main) [![MIT License](https://img.shields.io/pypi/l/juditha)](./LICENSE)
+[![juditha on pypi](https://img.shields.io/pypi/v/juditha)](https://pypi.org/project/juditha/)
+[![PyPI Downloads](https://static.pepy.tech/badge/juditha/month)](https://pepy.tech/projects/juditha)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/juditha)](https://pypi.org/project/juditha/)
+[![Python test and package](https://github.com/dataresearchcenter/juditha/actions/workflows/python.yml/badge.svg)](https://github.com/dataresearchcenter/juditha/actions/workflows/python.yml)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![Coverage Status](https://coveralls.io/repos/github/dataresearchcenter/juditha/badge.svg?branch=main)](https://coveralls.io/github/dataresearchcenter/juditha?branch=main)
+[![AGPLv3+ License](https://img.shields.io/pypi/l/juditha)](./LICENSE)
+[![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 # juditha
 
