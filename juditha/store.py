@@ -128,16 +128,20 @@ class Store:
         threshold = threshold or settings.fuzzy_threshold
         limit = limit or settings.limit
         clean_q = clean_name(q)
+        if not clean_q or len(clean_q) < settings.min_length:
+            return
 
-        # 1. try exact
-        query = self.index.parse_query(
-            f'"{clean_q}"',
-            field_boosts={"caption": 2},
-        )
+        # 1. try exact caption
+        query = self.index.parse_query(f'"{clean_q}"', ["caption"])
         for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
-        # 2. more fuzzy
+        # 2. lookup other names
+        query = self.index.parse_query(f'"{clean_q}"', ["names"])
+        for res in self._search(q, clean_q, query, limit, threshold):
+            return res
+
+        # 3. more fuzzy
         # FIXME seems not to work
         query = tantivy.Query.fuzzy_term_query(
             self.index.schema, "names", clean_q, prefix=True
