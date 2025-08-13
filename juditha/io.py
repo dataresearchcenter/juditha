@@ -54,15 +54,17 @@ def load_catalog(
     store = store or get_store()
     catalog = Catalog._from_uri(uri)
     for dataset in catalog.datasets:
-        load_dataset(dataset.uri, store)
+        if dataset.uri:
+            load_dataset(dataset.uri, store)
     if sync:
         store.build()
 
 
 def load_names(uri: Uri, store: Store | None = None, schema: str | None = None) -> None:
+    schemata = {schema} if schema else set()
     with store or get_store() as store:
         for name in logged_items(
             smart_stream(uri), "Load", item_name="Name", logger=log, uri=uri
         ):
             name = name.strip()
-            store.put(Doc(caption=name, names={name}, schema=schema or ""))
+            store.put(Doc(caption=name, names={name}, schemata=schemata))
