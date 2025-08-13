@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
 from juditha import io, lookup
-from juditha.api import app
 from juditha.cli import cli
 from juditha.store import get_store
 
@@ -31,34 +30,6 @@ def test_io(fixtures_path, store):
 
     assert lookup("European", uri=store.uri) is None
     assert lookup("European", threshold=0.5, uri=store.uri) is not None
-
-
-def test_api(monkeypatch, fixtures_path, store):
-    io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
-    store.build()
-
-    monkeypatch.setenv("JUDITHA_URI", store.uri)
-    get_store.cache_clear()
-    client = TestClient(app)
-
-    res = client.head("/European Parliament")
-    assert res.status_code == 200
-    res = client.head("/European parlament")
-    assert res.status_code == 404
-
-    res = client.get("/European Parliament")
-    assert res.json()["score"] > 0.97
-
-    res = client.get("/European?threshold=0.5")
-    assert res.json()["query"] == "European"
-    assert "European" in res.json()["caption"]  # FIXME
-    assert res.json()["schemata"] == ["PublicBody"]
-    assert res.json()["score"] > 0.5
-
-    res = client.head("/shdfjkoshfaj")
-    assert res.status_code == 404
-    res = client.get("/dshjka")
-    assert res.status_code == 404
 
 
 def test_cli(monkeypatch, fixtures_path: Path, tmp_path):

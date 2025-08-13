@@ -57,27 +57,6 @@ assert lookup("doe, jane") is None
 assert lookup("doe, jane", threshold=0.5) == "Jane Doe"
 ```
 
-## run as api
-
-    uvicorn --port 8000 juditha.api:app --workers 8
-
-### api calls
-
-Just do head requests to check if a name is known:
-
-    curl -I "http://localhost:8000/jane%20doe"
-    HTTP/1.1 200 OK
-
-    curl -I "http://localhost:8000/John"
-    HTTP/1.1 404 Not Found
-
-An actual request returns the canonized name and optional [FollowTheMoney Schema](https://followthemoney.tech/explorer/):
-
-    curl "http://localhost:8000/jane doe"
-    {"name": "Jane Doe", "schema": "Person", "score": 1}
-
-Tweak threshold (default: 0.97) via `?threshold=0.6`
-
 ## the name
 
 **Juditha Dommer** was the daughter of a coppersmith and raised seven children, while her husband Johann Pachelbel wrote a *canon*.
