@@ -53,7 +53,7 @@ def unpack_entity(e: EntityProxy) -> Row | None:
             "caption": caption,
             "schema": e.schema.name,
             "names": names,
-            "symbols": symbols,
+            "symbols": {str(s) for s in symbols},
         }
 
 

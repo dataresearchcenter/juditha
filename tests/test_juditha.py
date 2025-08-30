@@ -39,7 +39,7 @@ def test_io(fixtures_path, store):
     store.build()
     jane = lookup("Jane Doe", uri=store.uri)
     assert jane is not None
-    assert "1682564" in jane.symbols
+    assert "[NAME:1682564]" in jane.symbols
 
 
 def test_cli(monkeypatch, fixtures_path: Path, tmp_path):
