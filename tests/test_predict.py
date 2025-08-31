@@ -3,32 +3,35 @@ from unittest.mock import MagicMock, patch
 from juditha import predict
 
 
-def test_get_sample(store, eu_authorities):
-    """Test sample data generation from aggregator"""
+def test_sample_aggregator(store, eu_authorities):
+    """Test SampleAggregator class"""
     # Load test data into aggregator
     for entity in eu_authorities:
         store.aggregator.put(entity)
     store.aggregator.flush()
 
-    # Get sample data
-    samples = list(predict.get_sample(store.aggregator, limit=10))
+    # Create SampleAggregator and make sample
+    sampler = predict.SampleAggregator(store.aggregator, limit=10)
+    sampler.make_sample()
 
-    # Check we got samples
+    # Check we collected data
+    assert sampler.collected > 0
+    assert len(sampler.names) > 0
+    assert len(sampler.tokens) > 0
+
+    # Check sample format from iterate
+    samples = list(sampler.iterate())
     assert len(samples) > 0
 
-    # Check sample format
     for label, text in samples:
         assert label.startswith("__label__")
         assert isinstance(text, str)
         assert len(text) > 0
 
 
-@patch("random.sample")  # Mock to make noise generation deterministic
 @patch("random.choice")
 @patch("random.randint")
-def test_create_training_data(
-    mock_randint, mock_choice, mock_sample, store, eu_authorities
-):
+def test_create_training_data(mock_randint, mock_choice, store, eu_authorities):
     """Test training data file creation with noise"""
     # Load test data
     for entity in eu_authorities:
@@ -38,12 +41,11 @@ def test_create_training_data(
     # Mock noise generation to be predictable
     mock_choice.return_value = "char_add"
     mock_randint.return_value = 0
-    mock_sample.return_value = [("__label__Person", "john")]  # Mock one noise sample
 
-    # Create training data
-    train_file, val_file = predict.create_training_data(
-        store.aggregator, limit=20, train_ratio=0.8
-    )
+    # Create SampleAggregator and training data
+    sampler = predict.SampleAggregator(store.aggregator, limit=20, train_ratio=0.8)
+    sampler.make_sample()
+    train_file, val_file = sampler.create_training_data()
 
     try:
         # Check files exist
@@ -56,8 +58,6 @@ def test_create_training_data(
 
         assert len(train_lines) > 0
         assert len(val_lines) > 0
-
-        # Check training data includes noise (should be 110% of original training size)
 
         # Check format
         for line in train_lines[:3]:  # Check first few lines
@@ -127,7 +127,7 @@ def test_predict_schema(mock_load_model, tmp_path):
     results = list(predict.predict_schema("John Doe", model_path=model_path))
 
     assert len(results) == 1
-    assert results[0].schema_name == "Person"
+    assert results[0].label == "Person"
     assert results[0].score == 0.95
 
     # Check model was loaded and called correctly

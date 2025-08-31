@@ -6,15 +6,17 @@ https://github.com/alephdata/followthemoney-typepredict
 import random
 import tempfile
 import threading
+from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable, Generator, Literal, TypeAlias, cast
+from typing import Callable, Generator, Iterable, Literal, TypeAlias, cast
 
 import fasttext
 from anystore.logging import get_logger
 from anystore.util import Took
+from rigour.names import tokenize_name
 
-from juditha.aggregator import Aggregator
+from juditha.aggregator import Aggregator, Row
 from juditha.model import SCHEMA_NER, SchemaPrediction
 from juditha.settings import Settings
 
@@ -26,6 +28,7 @@ Label: TypeAlias = Literal[
     "__label__Company",
     "__label__Person",
     "__label__Address",
+    "__label__UNK",
 ]
 FT: TypeAlias = tuple[Label, str]
 
@@ -83,88 +86,55 @@ def add_noise(text: str) -> str:
     return text
 
 
-def get_sample(
-    aggregator: Aggregator,
-    limit: int | None = 100_000,
-    normalizer: Callable[..., str] | None = None,
-) -> Generator[FT, None, None]:
-    """Get representative sample data across all schemata and countries"""
-
-    log.info("Querying sample data ...", uri=aggregator.uri)
-    with Took() as t:
-        normalizer = normalizer or default_normalize
-        actual_limit = limit or 100_000
-
+class SampleAggregator:
+    def __init__(
+        self,
+        aggregator: Aggregator,
+        limit: int | None = 100_000,
+        train_ratio: float | None = 0.8,
+        normalizer: Callable[..., str] | None = None,
+    ):
+        self.aggregator = aggregator
+        self.limit = limit or 100_000
+        self.normalizer = normalizer or default_normalize
+        self.names: dict[str, set[str]] = defaultdict(set)
+        self.tokens: dict[str, set[str]] = defaultdict(set)
         # Allocate samples proportionally
-        schema_allocation = int(actual_limit * 0.5)  # 60% for schema diversity
-        country_allocation = int(actual_limit * 0.3)  # 20% for country diversity
-        random_allocation = (
-            actual_limit - schema_allocation - country_allocation
+        self.schema_allocation = int(self.limit * 0.5)  # 60% for schema diversity
+        self.country_allocation = int(self.limit * 0.3)  # 20% for country diversity
+        self.random_allocation = (
+            self.limit - self.schema_allocation - self.country_allocation
         )  # 20% random
+        self.train_ratio = train_ratio or 0.8
+        self.collected = 0
 
-        seen_rows = set()  # For deduplication using caption+schema as key
-        yielded_count = 0
+    def make_sample(self) -> None:
+        """Get representative sample data across all schemata and countries"""
 
-        # 1. Get schema samples (distributed across all schemas)
-        schema_query = "SELECT DISTINCT schema FROM names"
-        schema_result = aggregator.table.execute(schema_query)
-        schemas = [row[0] for row in schema_result.fetchall()]
+        log.info("Querying sample data ...", uri=self.aggregator.uri)
+        self.collected = 0
+        with Took() as t:
+            # 1. Get schema samples (distributed across all schemas)
+            schema_query = "SELECT DISTINCT schema FROM names"
+            result = self.aggregator.table.execute(schema_query)
+            schemas = [row[0] for row in result.fetchall()]
+            if schemas:
+                samples_per_schema = max(1, self.schema_allocation // len(schemas))
+                for schema in schemas:
+                    query = f"""
+                    SELECT {COLUMNS}
+                    FROM names
+                    WHERE schema = ?
+                    ORDER BY RANDOM()
+                    LIMIT ?
+                    """
+                    result = self.aggregator.table.execute(
+                        query, [schema, samples_per_schema]
+                    )
+                    collected = self._collect_result(result.fetchall())
+                    log.info(f"Collected {collected} names for schema `{schema}`.")
 
-        if schemas:
-            samples_per_schema = max(1, schema_allocation // len(schemas))
-
-            for schema in schemas:
-                if yielded_count >= actual_limit:
-                    break
-
-                schema_count = 0
-
-                schema_sample_query = f"""
-                SELECT {COLUMNS}
-                FROM names
-                WHERE schema = ?
-                ORDER BY RANDOM()
-                LIMIT ?
-                """
-                schema_result = aggregator.table.execute(
-                    schema_sample_query, [schema, samples_per_schema]
-                )
-
-                for row in schema_result.fetchall():
-                    if yielded_count >= actual_limit:
-                        break
-
-                    caption, row_schema, names, aliases, countries, symbols = row
-                    dedup_key = (caption, row_schema)
-
-                    if dedup_key in seen_rows:
-                        continue
-                    seen_rows.add(dedup_key)
-
-                    if row_schema in SCHEMA_NER:
-                        label: Label = cast(Label, f"__label__{row_schema}")
-                        for name in names:
-                            if yielded_count >= actual_limit:
-                                break
-                            yield label, normalizer(name)
-                            yielded_count += 1
-                            schema_count += 1
-
-                        # Include fewer aliases than names
-                        for i, alias in enumerate(aliases):
-                            if yielded_count >= actual_limit:
-                                break
-                            if (
-                                i < len(names) // 3
-                            ):  # Include ~1/3 as many aliases as names
-                                yield label, normalizer(alias)
-                                yielded_count += 1
-                                schema_count += 1
-
-                log.info(f"Collected {schema_count} names for schema `{schema}`.")
-
-        # 2. Get country samples (distributed across countries)
-        if yielded_count < actual_limit:
+            # 2. Get country samples (distributed across countries)
             country_query = """
             SELECT array_to_string(countries, ',') as country_str, COUNT(*) as cnt
             FROM names
@@ -173,142 +143,105 @@ def get_sample(
             ORDER BY cnt DESC
             LIMIT 50
             """
-            country_result = aggregator.table.execute(country_query)
-            countries = [row[0] for row in country_result.fetchall()]
-
+            result = self.aggregator.table.execute(country_query)
+            countries = [row[0] for row in result.fetchall()]
             if countries:
-                samples_per_country = max(1, country_allocation // len(countries))
-
+                samples_per_country = max(1, self.country_allocation // len(countries))
                 for country_str in countries:
-                    if yielded_count >= actual_limit:
-                        break
-
-                    country_count = 0
-
-                    country_sample_query = f"""
+                    query = f"""
                     SELECT {COLUMNS}
                     FROM names
                     WHERE array_to_string(countries, ',') = ?
                     ORDER BY RANDOM()
                     LIMIT ?
                     """
-                    country_result = aggregator.table.execute(
-                        country_sample_query, [country_str, samples_per_country]
+                    result = self.aggregator.table.execute(
+                        query, [country_str, samples_per_country]
                     )
-
-                    for row in country_result.fetchall():
-                        if yielded_count >= actual_limit:
-                            break
-
-                        caption, row_schema, names, aliases, countries, symbols = row
-                        dedup_key = (caption, row_schema)
-
-                        if dedup_key in seen_rows:
-                            continue
-                        seen_rows.add(dedup_key)
-
-                        if row_schema in SCHEMA_NER:
-                            label: Label = cast(Label, f"__label__{row_schema}")
-                            for name in names:
-                                if yielded_count >= actual_limit:
-                                    break
-                                yield label, normalizer(name)
-                                yielded_count += 1
-                                country_count += 1
-
-                            # Include fewer aliases than names
-                            for i, alias in enumerate(aliases):
-                                if yielded_count >= actual_limit:
-                                    break
-                                if (
-                                    i < len(names) // 3
-                                ):  # Include ~1/3 as many aliases as names
-                                    yield label, normalizer(alias)
-                                    yielded_count += 1
-                                    country_count += 1
-
+                    collected = self._collect_result(result.fetchall())
                     log.info(
-                        f"Collected {country_count} names for country `{country_str}`."
+                        f"Collected {collected} names for country `{country_str}`."
                     )
 
-        # 3. Get random samples to fill remaining quota
-        if yielded_count < actual_limit:
-            remaining = min(random_allocation, actual_limit - yielded_count)
-            random_query = f"""
-            SELECT {COLUMNS}
-            FROM names
-            ORDER BY RANDOM()
-            LIMIT ?
-            """
-            random_result = aggregator.table.execute(
-                random_query, [remaining * 2]
-            )  # Get extra to account for dedup
+            # 3. Get random samples to fill remaining quota
+            if self.collected < self.limit:
+                remaining = min(self.random_allocation, self.limit - self.collected)
+                random_query = f"""
+                SELECT {COLUMNS}
+                FROM names
+                ORDER BY RANDOM()
+                LIMIT ?
+                """
+                result = self.aggregator.table.execute(random_query, [remaining])
+                collected = self._collect_result(result.fetchall())
+                log.info(f"Collected {collected} random other names")
 
-            for row in random_result.fetchall():
-                if yielded_count >= actual_limit:
-                    break
+            # collect longer tokens
+            log.info("Building tokens ...")
+            for name, schemata in self.names.items():
+                for token in tokenize_name(name, 8):
+                    self.tokens[token].update(schemata)
 
-                caption, row_schema, names, aliases, countries, symbols = row
-                dedup_key = (caption, row_schema)
+            log.info(
+                "Query sample data complete.",
+                took=t.took,
+                collected=self.collected,
+                names=len(self.names),
+                tokens=len(self.tokens),
+            )
 
-                if dedup_key in seen_rows:
-                    continue
-                seen_rows.add(dedup_key)
+    def _collect_result(self, rows: Iterable[Row]) -> int:
+        count = 0
+        for caption, schema, names, aliases, _, _ in rows:
+            self.names[self.normalizer(caption)].add(schema)
+            for name in names:
+                name = self.normalizer(name)
+                self.names[name].add(schema)
+                count += 1
 
-                if row_schema in SCHEMA_NER:
-                    label: Label = cast(Label, f"__label__{row_schema}")
-                    for name in names:
-                        if yielded_count >= actual_limit:
-                            break
-                        yield label, normalizer(name)
-                        yielded_count += 1
+            # Include a few aliases
+            for i, alias in enumerate(aliases):
+                if i < len(names) // 3:  # Include ~1/3 as many aliases as names
+                    alias = self.normalizer(alias)
+                    self.names[alias].add(schema)
+        self.collected += count
+        return count
 
-                    # Include fewer aliases than names
-                    for i, alias in enumerate(aliases):
-                        if yielded_count >= actual_limit:
-                            break
-                        if i < len(names) // 3:  # Include ~1/3 as many aliases as names
-                            yield label, normalizer(alias)
-                            yielded_count += 1
+    def _build_ft(self, name: str, schemata: set[str]) -> FT:
+        if len(schemata) == 1:
+            schema = list(schemata)[0]
+            if schema in SCHEMA_NER:
+                return cast(Label, f"__label__{schema}"), name
+        return "__label__UNK", name
 
-            log.info(f"Collected {remaining} names to fill up quota.")
+    def iterate(self) -> Generator[FT, None, None]:
+        """Iterate names and tokens with added 10% synthetic noise. If a name or
+        token has more than 1 schemata, the label will be UNK"""
+        names = list(self.names.keys())
+        random.shuffle(names)
+        tokens = list(self.tokens.keys())
+        random.shuffle(tokens)
+        for name in names:
+            yield self._build_ft(name, self.names[name])
+            if random.randint(0, 100) < 11:
+                yield self._build_ft(add_noise(name), self.names[name])
+        for token in tokens:
+            yield self._build_ft(token, self.tokens[token])
+            if random.randint(0, 100) < 11:
+                yield self._build_ft(add_noise(token), self.tokens[token])
 
-        log.info("Query sample data complete.", took=t.took)
+    def create_training_data(self) -> tuple[Path, Path]:
+        """Create training and validation data files with 10% synthetic noise"""
+        train_file = Path(tempfile.mktemp(suffix=".txt"))
+        val_file = Path(tempfile.mktemp(suffix=".txt"))
 
-
-def create_training_data(
-    aggregator: Aggregator, train_ratio: float = 0.8, limit: int | None = 100_000
-) -> tuple[Path, Path]:
-    """Create training and validation data files with 10% synthetic noise"""
-    train_file = Path(tempfile.mktemp(suffix=".txt"))
-    val_file = Path(tempfile.mktemp(suffix=".txt"))
-
-    samples = list(get_sample(aggregator, limit))
-    split_idx = int(len(samples) * train_ratio)
-
-    train_samples = samples[:split_idx]
-    val_samples = samples[split_idx:]
-
-    with open(train_file, "w") as f:
-        # Write original training samples
-        for label, text in train_samples:
-            f.write(f"{label} {text}\n")
-
-        # Add 10% synthetic noise samples
-        noise_count = int(len(train_samples) * 0.1)
-        noise_samples = random.sample(
-            train_samples, min(noise_count, len(train_samples))
-        )
-
-        for label, text in noise_samples:
-            noisy_text = add_noise(text)
-            f.write(f"{label} {noisy_text}\n")
-
-    with open(val_file, "w") as f:
-        for label, text in val_samples:
-            f.write(f"{label} {text}\n")
-
-    return train_file, val_file
+        with open(train_file, "w") as train, open(val_file, "w") as val:
+            for label, text in self.iterate():
+                if (random.randint(0, 100) / 100) > self.train_ratio:
+                    train.write(f"{label} {text}\n")
+                else:
+                    val.write(f"{label} {text}\n")
+        return train_file, val_file
 
 
 def train_model(
@@ -328,7 +261,9 @@ def train_model(
     if model_path is None:
         model_path = str(settings.make_path("schema_classifier.bin"))
 
-    train_file, val_file = create_training_data(aggregator, limit=limit)
+    sampler = SampleAggregator(aggregator, limit)
+    sampler.make_sample()
+    train_file, val_file = sampler.create_training_data()
 
     try:
         model = fasttext.train_supervised(
@@ -375,7 +310,5 @@ def predict_schema(
 
     for label, score in zip(labels, scores):
         if score > 0.5:
-            schema = label.replace("__label__", "")
-            yield SchemaPrediction(
-                name=text, schema_name=schema, score=round(float(score), 4)
-            )
+            label = label.replace("__label__", "")
+            yield SchemaPrediction(name=text, label=label, score=round(float(score), 4))

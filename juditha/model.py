@@ -6,7 +6,7 @@ from followthemoney import model
 from followthemoney.exc import InvalidData
 from pydantic import BaseModel, computed_field
 
-NER_TAG: TypeAlias = Literal["PER", "ORG", "LOC"]
+NER_TAG: TypeAlias = Literal["PER", "ORG", "LOC", "OTHER"]
 SCHEMA_NER: dict[str, NER_TAG] = {
     "PublicBody": "ORG",
     "Company": "ORG",
@@ -69,10 +69,10 @@ class Result(Doc):
 
 class SchemaPrediction(BaseModel):
     name: str
-    schema_name: str
+    label: str
     score: float
 
     @computed_field
     @property
     def ner_tag(self) -> NER_TAG:
-        return SCHEMA_NER[self.schema_name]
+        return SCHEMA_NER.get(self.label, "OTHER")
