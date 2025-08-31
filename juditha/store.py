@@ -1,6 +1,6 @@
 import multiprocessing
 from functools import cache, lru_cache
-from typing import Generator, Self
+from typing import Generator, Iterable, Self
 
 import jellyfish
 import tantivy
@@ -139,7 +139,11 @@ class Store:
 
     @error_handler(max_retries=0)
     def search(
-        self, q: str, threshold: float | None = None, limit: int | None = None
+        self,
+        q: str,
+        threshold: float | None = None,
+        limit: int | None = None,
+        schemata: Iterable[str] | None = None,
     ) -> Result | None:
         threshold = threshold or settings.fuzzy_threshold
         limit = limit or settings.limit
@@ -147,21 +151,29 @@ class Store:
         if not clean_q or len(clean_q) < settings.min_length:
             return
 
+        # Build schema filter if provided
+        schema_filter = ""
+        if schemata:
+            schema_terms = " OR ".join(f'schemata:"{schema}"' for schema in schemata)
+            schema_filter = f" AND ({schema_terms})"
+
         # 1. try exact caption
-        query = self.index.parse_query(f'"{clean_q}"', ["caption"])
+        query_str = f'"{clean_q}"{schema_filter}'
+        query = self.index.parse_query(query_str, ["caption"])
         for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
         # 2. lookup other names
-        query = self.index.parse_query(f'"{clean_q}"', ["names"])
+        query_str = f'"{clean_q}"{schema_filter}'
+        query = self.index.parse_query(query_str, ["names", "aliases"])
         for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
-        # 3. more fuzzy
-        # FIXME seems not to work
-        query = tantivy.Query.fuzzy_term_query(
-            self.index.schema, "names", clean_q, prefix=True
-        )
+        # 3. more fuzzy - broad term search with OR  FIXME doesn't seem to work
+        terms = clean_q.split()
+        terms = " OR ".join(f"{term}~1" for term in terms)
+        query_str = f"{terms}{schema_filter}"
+        query = self.index.parse_query(query_str, ["caption", "names", "aliases"])
         for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
@@ -183,10 +195,13 @@ def get_store(uri: str | None = None) -> Store:
 
 @lru_cache(100_000)
 def lookup(
-    q: str, threshold: float | None = None, uri: Uri | None = None
+    q: str,
+    threshold: float | None = None,
+    uri: Uri | None = None,
+    schemata: tuple[str, ...] | None = None,
 ) -> Result | None:
     store = get_store(uri)
-    return store.search(q, threshold)
+    return store.search(q, threshold, schemata=set(schemata) if schemata else None)
 
 
 @lru_cache(100_000)

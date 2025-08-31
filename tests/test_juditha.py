@@ -51,6 +51,10 @@ def test_io(fixtures_path, store):
     assert "mt" in jane.countries
     assert "jani" in jane.aliases
 
+    assert lookup("Jane Doe", schemata=("Person",), uri=store.uri) is not None
+    assert lookup("Jane Doe", schemata=("Company",), uri=store.uri) is None
+    assert lookup("Jani Doe", uri=store.uri) is None
+
 
 def test_cli(monkeypatch, fixtures_path: Path, tmp_path):
     monkeypatch.setenv("JUDITHA_URI", tmp_path)
