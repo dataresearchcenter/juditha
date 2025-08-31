@@ -96,8 +96,8 @@ def get_sample(
         actual_limit = limit or 100_000
 
         # Allocate samples proportionally
-        schema_allocation = int(actual_limit * 0.6)  # 60% for schema diversity
-        country_allocation = int(actual_limit * 0.2)  # 20% for country diversity
+        schema_allocation = int(actual_limit * 0.5)  # 60% for schema diversity
+        country_allocation = int(actual_limit * 0.3)  # 20% for country diversity
         random_allocation = (
             actual_limit - schema_allocation - country_allocation
         )  # 20% random
@@ -116,6 +116,8 @@ def get_sample(
             for schema in schemas:
                 if yielded_count >= actual_limit:
                     break
+
+                schema_count = 0
 
                 schema_sample_query = f"""
                 SELECT {COLUMNS}
@@ -146,6 +148,7 @@ def get_sample(
                                 break
                             yield label, normalizer(name)
                             yielded_count += 1
+                            schema_count += 1
 
                         # Include fewer aliases than names
                         for i, alias in enumerate(aliases):
@@ -156,6 +159,9 @@ def get_sample(
                             ):  # Include ~1/3 as many aliases as names
                                 yield label, normalizer(alias)
                                 yielded_count += 1
+                                schema_count += 1
+
+                log.info(f"Collected {schema_count} names for schema `{schema}`.")
 
         # 2. Get country samples (distributed across countries)
         if yielded_count < actual_limit:
@@ -176,6 +182,8 @@ def get_sample(
                 for country_str in countries:
                     if yielded_count >= actual_limit:
                         break
+
+                    country_count = 0
 
                     country_sample_query = f"""
                     SELECT {COLUMNS}
@@ -206,6 +214,7 @@ def get_sample(
                                     break
                                 yield label, normalizer(name)
                                 yielded_count += 1
+                                country_count += 1
 
                             # Include fewer aliases than names
                             for i, alias in enumerate(aliases):
@@ -216,6 +225,11 @@ def get_sample(
                                 ):  # Include ~1/3 as many aliases as names
                                     yield label, normalizer(alias)
                                     yielded_count += 1
+                                    country_count += 1
+
+                    log.info(
+                        f"Collected {country_count} names for country `{country_str}`."
+                    )
 
         # 3. Get random samples to fill remaining quota
         if yielded_count < actual_limit:
@@ -256,6 +270,8 @@ def get_sample(
                         if i < len(names) // 3:  # Include ~1/3 as many aliases as names
                             yield label, normalizer(alias)
                             yielded_count += 1
+
+            log.info(f"Collected {remaining} names to fill up quota.")
 
         log.info("Query sample data complete.", took=t.took)
 
