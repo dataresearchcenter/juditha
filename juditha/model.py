@@ -74,5 +74,5 @@ class SchemaPrediction(BaseModel):
 
     @computed_field
     @property
-    def ner_label(self) -> NER_TAG:
+    def ner_tag(self) -> NER_TAG:
         return SCHEMA_NER[self.schema_name]
