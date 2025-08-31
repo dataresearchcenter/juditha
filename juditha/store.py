@@ -13,9 +13,9 @@ from rapidfuzz import process
 from rigour.names import Name
 
 from juditha.aggregator import Aggregator
-from juditha.model import Doc, Result
+from juditha.model import NER_TAG, Doc, Result
 from juditha.settings import Settings
-from juditha.validate import Tag, Validator
+from juditha.validate import Validator
 
 NUM_CPU = multiprocessing.cpu_count()
 INDEX = "tantivy.db"
@@ -165,7 +165,7 @@ class Store:
         for res in self._search(q, clean_q, query, limit, threshold):
             return res
 
-    def validate(self, name: str, tag: Tag) -> bool:
+    def validate(self, name: str, tag: NER_TAG) -> bool:
         return self.validator.validate_name(name, tag)
 
     def __enter__(self) -> Self:
@@ -190,6 +190,6 @@ def lookup(
 
 
 @lru_cache(100_000)
-def validate_name(name: str, tag: Tag, uri: Uri | None = None) -> bool:
+def validate_name(name: str, tag: NER_TAG, uri: Uri | None = None) -> bool:
     store = get_store(uri)
     return store.validate(name, tag)

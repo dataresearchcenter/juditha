@@ -1,10 +1,19 @@
 import itertools
 from functools import cache
-from typing import Generator, Self, TypeAlias
+from typing import Generator, Literal, Self, TypeAlias
 
 from followthemoney import model
 from followthemoney.exc import InvalidData
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
+
+NER_TAG: TypeAlias = Literal["PER", "ORG", "LOC"]
+SCHEMA_NER: dict[str, NER_TAG] = {
+    "PublicBody": "ORG",
+    "Company": "ORG",
+    "Organization": "ORG",
+    "Person": "PER",
+    "Address": "LOC",
+}
 
 
 @cache
@@ -56,3 +65,14 @@ class Result(Doc):
     @property
     def common_schema(self) -> str:
         return get_common_schema(*self.schemata)
+
+
+class SchemaPrediction(BaseModel):
+    name: str
+    schema_name: str
+    score: float
+
+    @computed_field
+    @property
+    def ner_label(self) -> NER_TAG:
+        return SCHEMA_NER[self.schema_name]

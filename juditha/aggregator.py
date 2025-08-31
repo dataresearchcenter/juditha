@@ -52,7 +52,7 @@ def unpack_entity(e: EntityProxy) -> Row | None:
     caption = e.caption
     if caption in Schemata:
         caption = pick_name(list(names))
-    if caption is not None and caption not in Schemata:
+    if caption is not None and caption not in Schemata and len(caption) > 5:
         symbols = select_symbols(e)
         if not symbols:
             symbols = get_symbols(e)

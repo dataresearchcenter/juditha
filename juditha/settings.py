@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from anystore.util import join_uri, uri_to_path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -30,3 +33,6 @@ class Settings(BaseSettings):
     min_length: int = 4
 
     api: ApiSettings = ApiSettings()
+
+    def make_path(self, path: str) -> Path:
+        return uri_to_path(join_uri(self.uri, path))

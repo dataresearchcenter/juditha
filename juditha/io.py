@@ -10,8 +10,8 @@ from juditha.store import Doc, Store, get_store
 log = get_logger(__name__)
 
 
-DEFAULT_SCHEMA = "LegalEntity"
-Q = Query().where(schema=DEFAULT_SCHEMA, schema_include_descendants=True)
+SCHEMATA = ["LegalEntity", "Organization", "PublicBody", "Company", "Person", "Address"]
+Q = Query().where(schema__in=SCHEMATA)
 
 
 def load_proxies(

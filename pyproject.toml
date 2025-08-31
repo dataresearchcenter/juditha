@@ -22,6 +22,7 @@ dependencies = [
     "jellyfish (>=1.2.0,<2.0.0)",
     "duckdb (>=1.3.2,<2.0.0)",
     "pandas (>=2.3.2,<3.0.0)",
+    "fasttext-numpy2 (>=0.10.4,<0.11.0)",
 ]
 
 [project.scripts]

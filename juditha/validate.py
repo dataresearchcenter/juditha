@@ -4,7 +4,7 @@ eliminates NER noise by testing if the extracted name contains any of a known
 token of a huge set of names.
 """
 
-from typing import Literal, TypeAlias
+from typing import TypeAlias
 
 from anystore.decorators import anycache
 from anystore.io import logged_items
@@ -16,15 +16,15 @@ from normality import latinize_text
 from rigour.names import Name
 
 from juditha.aggregator import Aggregator
+from juditha.model import NER_TAG
 
 log = get_logger(__name__)
 
-Tag: TypeAlias = Literal["PER", "ORG", "LOC"]
-Tokens: TypeAlias = dict[Tag, list[str]]
+Tokens: TypeAlias = dict[NER_TAG, list[str]]
 MIN_TOKEN_LENGTH = 5
 
 
-def _schema_to_tag(schema: str) -> Tag:
+def _schema_to_tag(schema: str) -> NER_TAG:
     if schema == "Address":
         return "LOC"
     if schema == "Person":
@@ -47,12 +47,12 @@ def _name_tokens(name: str) -> set[str]:
     return tokens
 
 
-def _name_tag_tokens(name: str, schema: str) -> tuple[set[str], Tag]:
+def _name_tag_tokens(name: str, schema: str) -> tuple[set[str], NER_TAG]:
     return _name_tokens(name), _schema_to_tag(schema)
 
 
 def build_tokens(aggregator: Aggregator) -> Tokens:
-    buffer: dict[Tag, set[str]] = {"PER": set(), "ORG": set(), "LOC": set()}
+    buffer: dict[NER_TAG, set[str]] = {"PER": set(), "ORG": set(), "LOC": set()}
     for name_tokens, tag in logged_items(
         (_name_tag_tokens(n, s) for n, s in aggregator.iter_names_schema()),
         "Load",
@@ -87,11 +87,16 @@ class Validator:
             self._tokens = self.cache(build_tokens)(self.aggregator)
         return self._tokens
 
-    def validate_name(self, name: str, tag: Tag) -> bool:
+    def validate_name(self, name: str, tag: NER_TAG) -> bool:
         """Test if the given name shares any normalized tokens with the known
         sets of tokens for the given tag (PER, ORG, LOC)"""
         tokens = self.get_tokens()
+        name_tokens = _name_tokens(name)
+        need = len(name_tokens) // 2
+        seen = 0
         for token in _name_tokens(name):
             if token in tokens[tag]:
-                return True
+                seen += 1
+                if seen >= need:
+                    return True
         return False

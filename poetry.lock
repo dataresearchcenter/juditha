@@ -793,6 +793,38 @@ files = [
 ]
 
 [[package]]
+name = "fasttext-numpy2"
+version = "0.10.4"
+description = "fasttext Python bindings, fixed numpy 2 compatibiliy"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "fasttext-numpy2-0.10.4.tar.gz", hash = "sha256:156e84cf2c7db95b24897884284be52c1038fe2b1d0bd9f21bcaf363d2542825"},
+    {file = "fasttext_numpy2-0.10.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:358b09a612d4c803b2e60bbaaa5e004693777927ce3700d21167f5da7b1c1b80"},
+    {file = "fasttext_numpy2-0.10.4-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b78327f9ad9f0d0f425c646f9bf6c3750642e4d84a134a6f3a1ca236850a0ac0"},
+    {file = "fasttext_numpy2-0.10.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4c295f1f4d0b084b9274036ba3e254aa06fec1ac6a8c72f7984cb1bc1f60fb97"},
+    {file = "fasttext_numpy2-0.10.4-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3bcc2e0093315ecb6886d6b7c9abc9e2e3c51e0935bbce4038c4705f9b73a25d"},
+    {file = "fasttext_numpy2-0.10.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0ba8a684e31f188a5b6dafb17833d5c9890656164a43e95b8c865ce3439a5ff8"},
+    {file = "fasttext_numpy2-0.10.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b781303c8c24324e898b79c5a79f09d2d590e2a87f15c583557dc3ac94a33652"},
+    {file = "fasttext_numpy2-0.10.4-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5f65f7c96aa6a66fed58994ee0d45368f07fa3de5080d2f84f9f9b5ed7bca380"},
+    {file = "fasttext_numpy2-0.10.4-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c4719752a197f1d76f9bfb1343d6c63346f56ec037ba5fd85d14f024740402cb"},
+    {file = "fasttext_numpy2-0.10.4-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4258e8d7d9ac20c4fcb26a6382b6c0ba75c1e3377cf8eef6718dab99066ce677"},
+    {file = "fasttext_numpy2-0.10.4-cp36-cp36m-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0edc85a3ca85d4f0170a84e9ec2bfdf606e2e490c107bea95291051cc80335d9"},
+    {file = "fasttext_numpy2-0.10.4-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6d5fe255ec61a96f1e019ce472b88fe669cd7262dea06d8bdb8e193f91edb06c"},
+    {file = "fasttext_numpy2-0.10.4-cp37-cp37m-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:193f708baa15fd99c9f9094022626c1793ea70e0eccb8ea94107d5099d2b681f"},
+    {file = "fasttext_numpy2-0.10.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7e6ce53c3c733034d0ac94211cac055ef2cd8e4eb237a7f8d352fae9ce5c2eca"},
+    {file = "fasttext_numpy2-0.10.4-cp38-cp38-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:be188cc52108aad32b15c46b8d53122cf3d1462db9dcd94897533d8dd6eedc44"},
+    {file = "fasttext_numpy2-0.10.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:010cd3d59f8cafc32112f999e37bc13c75fdf7f690d1d3a7fb5eb132d551baac"},
+    {file = "fasttext_numpy2-0.10.4-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:41cfa07bad0a60bf2a0a0139c125a102b1d6101f46841586f2a1e879151bcc61"},
+]
+
+[package.dependencies]
+numpy = "*"
+pybind11 = ">=2.2"
+setuptools = ">=0.7.0"
+
+[[package]]
 name = "filelock"
 version = "3.18.0"
 description = "A platform independent file lock."
@@ -2427,6 +2459,21 @@ PyYAML = "*"
 anchors = ["unidecode"]
 
 [[package]]
+name = "pybind11"
+version = "3.0.1"
+description = "Seamless operability between C++11 and Python"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "pybind11-3.0.1-py3-none-any.whl", hash = "sha256:aa8f0aa6e0a94d3b64adfc38f560f33f15e589be2175e103c0a33c6bce55ee89"},
+    {file = "pybind11-3.0.1.tar.gz", hash = "sha256:9c0f40056a016da59bab516efb523089139fcc6f2ba7e4930854c61efb932051"},
+]
+
+[package.extras]
+global = ["pybind11-global (==3.0.1)"]
+
+[[package]]
 name = "pycodestyle"
 version = "2.14.0"
 description = "Python style guide checker"
@@ -3314,6 +3361,27 @@ doc = ["intersphinx_registry", "jupyterlite-pyodide-kernel", "jupyterlite-sphinx
 test = ["Cython", "array-api-strict (>=2.3.1)", "asv", "gmpy2", "hypothesis (>=6.30)", "meson", "mpmath", "ninja ; sys_platform != \"emscripten\"", "pooch", "pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
 
 [[package]]
+name = "setuptools"
+version = "80.9.0"
+description = "Easily download, build, install, upgrade, and uninstall Python packages"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"},
+    {file = "setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c"},
+]
+
+[package.extras]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1) ; sys_platform != \"cygwin\"", "ruff (>=0.8.0) ; sys_platform != \"cygwin\""]
+core = ["importlib_metadata (>=6) ; python_version < \"3.10\"", "jaraco.functools (>=4)", "jaraco.text (>=3.7)", "more_itertools", "more_itertools (>=8.8)", "packaging (>=24.2)", "platformdirs (>=4.2.2)", "tomli (>=2.0.1) ; python_version < \"3.11\"", "wheel (>=0.43.0)"]
+cover = ["pytest-cov"]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "pyproject-hooks (!=1.1)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "ini2toml[lite] (>=0.14)", "jaraco.develop (>=7.21) ; python_version >= \"3.9\" and sys_platform != \"cygwin\"", "jaraco.envs (>=2.2)", "jaraco.path (>=3.7.2)", "jaraco.test (>=5.5)", "packaging (>=24.2)", "pip (>=19.1)", "pyproject-hooks (!=1.1)", "pytest (>=6,!=8.1.*)", "pytest-home (>=0.5)", "pytest-perf ; sys_platform != \"cygwin\"", "pytest-subprocess", "pytest-timeout", "pytest-xdist (>=3)", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel (>=0.44.0)"]
+type = ["importlib_metadata (>=7.0.2) ; python_version < \"3.10\"", "jaraco.develop (>=7.21) ; sys_platform != \"cygwin\"", "mypy (==1.14.*)", "pytest-mypy"]
+
+[[package]]
 name = "shellingham"
 version = "1.5.4"
 description = "Tool to Detect Surrounding Shell"
@@ -3927,4 +3995,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "7745651a7c08c540a6e198954ebc516264f0980fa5a9a8151da3d1ff9a35ffa5"
+content-hash = "8380a825ce1decc6b1ce916ee6a7de68e8a69a49fe80b01a243d6ace4ed515b6"

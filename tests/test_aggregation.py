@@ -12,11 +12,11 @@ def test_aggregation_entities(tmp_path, eu_authorities):
     assert doc.caption == "Agencia Ejecutiva de Innovación y Redes"
     assert doc.names == {"Agencia Ejecutiva de Innovación y Redes"}
     assert doc.schemata == {"PublicBody"}
-    assert aggregator.count == 153
-    assert len([e for e in aggregator.iterate()]) == 153
+    assert aggregator.count == 152
+    assert len([e for e in aggregator.iterate()]) == 152
     names = list(aggregator.iter_names())
     assert all(isinstance(x, str) for x in names)
-    assert len(names) == 153
+    assert len(names) == 152
 
     aggregator = Aggregator(tmp_path / "names2.db")
     aggregator.load_entities(eu_authorities[:1])
