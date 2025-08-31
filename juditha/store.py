@@ -37,6 +37,8 @@ def make_schema() -> tantivy.Schema:
     schema_builder.add_text_field("schemata", tokenizer_name="raw", stored=True)
     schema_builder.add_text_field("caption", stored=True)
     schema_builder.add_text_field("names", stored=True)
+    schema_builder.add_text_field("aliases", stored=True)
+    schema_builder.add_text_field("countries", tokenizer_name="raw", stored=True)
     schema_builder.add_json_field("symbols", tokenizer_name="raw", stored=True)
     return schema_builder.build()
 

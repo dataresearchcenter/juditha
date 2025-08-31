@@ -32,7 +32,15 @@ def test_io(fixtures_path, store):
     assert lookup("European", threshold=0.5, uri=store.uri) is not None
 
     jane = make_entity(
-        {"id": "j", "schema": "Person", "properties": {"name": ["Jane Doe"]}}
+        {
+            "id": "j",
+            "schema": "Person",
+            "properties": {
+                "name": ["Jane Doe"],
+                "nationality": ["mt"],
+                "alias": ["jani"],
+            },
+        }
     )
     store.aggregator.put(jane)
     store.aggregator.flush()
@@ -40,6 +48,8 @@ def test_io(fixtures_path, store):
     jane = lookup("Jane Doe", uri=store.uri)
     assert jane is not None
     assert "[NAME:1682564]" in jane.symbols
+    assert "mt" in jane.countries
+    assert "jani" in jane.aliases
 
 
 def test_cli(monkeypatch, fixtures_path: Path, tmp_path):

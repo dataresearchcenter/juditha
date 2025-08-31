@@ -27,6 +27,8 @@ def get_common_schema(*schemata: str) -> str:
 class Doc(BaseModel):
     caption: str
     names: set[str] = set()
+    aliases: set[str] = set()
+    countries: set[str] = set()
     schemata: set[str] = set()
     symbols: set[str] = set()
     score: float = 0
@@ -43,6 +45,8 @@ class Result(Doc):
         return cls(
             caption=doc.caption,
             names=doc.names,
+            aliases=doc.aliases,
+            countries=doc.countries,
             query=q,
             score=score,
             schemata=doc.schemata,

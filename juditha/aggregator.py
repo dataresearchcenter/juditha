@@ -27,7 +27,12 @@ def make_table(uri: str) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(uri)
     con.sql(
         """CREATE TABLE IF NOT EXISTS names (
-            caption STRING, schema STRING, names STRING[], symbols STRING[]
+            caption STRING,
+            schema STRING,
+            names STRING[],
+            aliases STRING[],
+            countries STRING[],
+            symbols STRING[]
             )"""
     )
     return con
@@ -36,16 +41,18 @@ def make_table(uri: str) -> duckdb.DuckDBPyConnection:
 class Row(TypedDict):
     caption: str
     names: set[str]
+    aliases: set[str]
+    countries: set[str]
     symbols: set[str]
     schema: str
 
 
 def unpack_entity(e: EntityProxy) -> Row | None:
-    names: set[str] = set()
-    names.update(e.get("name"))
-    caption = pick_name(list(names)) or e.caption
+    names = set(e.get("name"))
+    caption = e.caption
+    if caption in Schemata:
+        caption = pick_name(list(names))
     if caption is not None and caption not in Schemata:
-        names.update(e.get("alias"))
         symbols = select_symbols(e)
         if not symbols:
             symbols = get_symbols(e)
@@ -53,6 +60,8 @@ def unpack_entity(e: EntityProxy) -> Row | None:
             "caption": caption,
             "schema": e.schema.name,
             "names": names,
+            "aliases": set(e.get("alias")),
+            "countries": set(e.countries),
             "symbols": {str(s) for s in symbols},
         }
 
@@ -66,6 +75,8 @@ class Aggregator:
         rows = filter(bool, map(unpack_entity, self.buffer))
         df = pd.DataFrame(rows)
         df["names"] = df["names"].map(list)
+        df["aliases"] = df["aliases"].map(list)
+        df["countries"] = df["countries"].map(list)
         df["symbols"] = df["symbols"].map(list)
         duckdb.register("df", df)
         self.table.execute("INSERT INTO names SELECT * FROM df")
@@ -82,31 +93,41 @@ class Aggregator:
         current_caption = None
         schemata: set[str] = set()
         names_: set[str] = set()
+        aliases_: set[str] = set()
+        countries_: set[str] = set()
         symbols_: set[str] = set()
         res = self.table.execute("SELECT * FROM names ORDER BY caption")
         while rows := res.fetchmany(100_000):
-            for caption, schema, names, symbols in rows:
+            for caption, schema, names, aliases, countries, symbols in rows:
                 if current_caption is None:
                     current_caption = caption
                 if current_caption != caption:
                     yield Doc(
                         caption=current_caption,
                         names=names_,
+                        aliases=aliases_,
+                        countries=countries_,
                         schemata=schemata,
                         symbols=symbols_,
                     )
                     current_caption = caption
                     names_ = set()
+                    aliases_ = set()
+                    countries_ = set()
                     symbols_ = set()
                     schemata = set()
                 schemata.add(schema)
                 names_.update(names)
+                aliases_.update(aliases)
+                countries_.update(countries)
                 symbols_.update(symbols)
         # don't forget the last (or only) one
         if current_caption:
             yield Doc(
                 caption=current_caption,
                 names=names_,
+                aliases=aliases_,
+                countries=countries_,
                 schemata=schemata,
                 symbols=symbols_,
             )
