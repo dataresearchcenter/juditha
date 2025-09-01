@@ -8,6 +8,7 @@ from pydantic import BaseModel, computed_field
 
 NER_TAG: TypeAlias = Literal["PER", "ORG", "LOC", "OTHER"]
 SCHEMA_NER: dict[str, NER_TAG] = {
+    "LegalEntity": "OTHER",
     "PublicBody": "ORG",
     "Company": "ORG",
     "Organization": "ORG",
@@ -62,6 +63,7 @@ class Result(Doc):
             symbols=doc.symbols,
         )
 
+    @computed_field
     @property
     def common_schema(self) -> str:
         return get_common_schema(*self.schemata)

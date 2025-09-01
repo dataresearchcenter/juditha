@@ -95,7 +95,7 @@ class Validator:
         need = len(name_tokens) // 2
         seen = 0
         for token in _name_tokens(name):
-            if token in tokens[tag]:
+            if token in tokens.get(tag, []):
                 seen += 1
                 if seen >= need:
                     return True
