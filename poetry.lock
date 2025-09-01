@@ -256,14 +256,14 @@ trio = ["trio (>=0.26.1)"]
 
 [[package]]
 name = "anystore"
-version = "0.3.10"
+version = "0.3.11"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-0.3.10-py3-none-any.whl", hash = "sha256:caf567b97f02c20b78d7c3bd79d1ffcb04286d5420f4b30c5e6087cc563d5423"},
-    {file = "anystore-0.3.10.tar.gz", hash = "sha256:c05723ae8ad53bab06d7eb1c0587a656d3603bf80d0f10aa80d3a19e0af764e0"},
+    {file = "anystore-0.3.11-py3-none-any.whl", hash = "sha256:e90f5d92efedc8109f0ccab45ff8f339ecf358656cda91c53403d8b3a6e7bcf9"},
+    {file = "anystore-0.3.11.tar.gz", hash = "sha256:57c01d3cfb4c55c87bd1c921685372d486c6b3b60af22c70b6d2f9062cce87bb"},
 ]
 
 [package.dependencies]
@@ -281,7 +281,7 @@ rigour = ">=1.0.0,<2.0.0"
 s3fs = ">2023.10,<2026"
 structlog = ">=22.0.0,<26.0.0"
 tqdm = ">=4.67.1,<5.0.0"
-typer = ">=0.16.0,<0.17.0"
+typer = ">=0.17"
 uuid7 = ">=0.1.0,<0.2.0"
 
 [package.extras]
@@ -1059,18 +1059,18 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.2.3"
+version = "4.2.4"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.2.3-py3-none-any.whl", hash = "sha256:a4647bd91e6ecf70f13b8bb51c877e25b0b3be2c11f6c675fcf3e1c4b0401e7f"},
-    {file = "ftmq-4.2.3.tar.gz", hash = "sha256:a779a3fa31847f997addbfdafd004ac70ccb97d90171232a91e078a6849beada"},
+    {file = "ftmq-4.2.4-py3-none-any.whl", hash = "sha256:19b1ab7a4e9f9dca6439302d3bdf7a41b243a69939a20e9aed4d520da9d93d6a"},
+    {file = "ftmq-4.2.4.tar.gz", hash = "sha256:42d1774ac9678753e2882e727368f00ac8464723277e8df9f3571d8a6859bb3c"},
 ]
 
 [package.dependencies]
-anystore = ">=0.3.10,<0.4.0"
+anystore = ">=0.3.11,<0.4.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.2.0,<5.0.0"
@@ -3639,14 +3639,14 @@ telegram = ["requests"]
 
 [[package]]
 name = "typer"
-version = "0.16.1"
+version = "0.17.3"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "typer-0.16.1-py3-none-any.whl", hash = "sha256:90ee01cb02d9b8395ae21ee3368421faf21fa138cb2a541ed369c08cec5237c9"},
-    {file = "typer-0.16.1.tar.gz", hash = "sha256:d358c65a464a7a90f338e3bb7ff0c74ac081449e53884b12ba658cbd72990614"},
+    {file = "typer-0.17.3-py3-none-any.whl", hash = "sha256:643919a79182ab7ac7581056d93c6a2b865b026adf2872c4d02c72758e6f095b"},
+    {file = "typer-0.17.3.tar.gz", hash = "sha256:0c600503d472bcf98d29914d4dcd67f80c24cc245395e2e00ba3603c9332e8ba"},
 ]
 
 [package.dependencies]
@@ -4010,4 +4010,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "8380a825ce1decc6b1ce916ee6a7de68e8a69a49fe80b01a243d6ace4ed515b6"
+content-hash = "4bbf7c913508ef8178d545bb8eaf7d96504d8597660771af743f7049fd761c7a"
