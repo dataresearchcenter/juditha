@@ -14,7 +14,6 @@ from typing import Callable, Generator, Iterable, Literal, TypeAlias, cast
 import fasttext
 from anystore.logging import get_logger
 from anystore.util import Took
-from rigour.names import tokenize_name
 
 from juditha.aggregator import Aggregator, Row
 from juditha.model import SCHEMA_NER, SchemaPrediction
@@ -98,7 +97,6 @@ class SampleAggregator:
         self.limit = limit or 100_000
         self.normalizer = normalizer or default_normalize
         self.names: dict[str, set[str]] = defaultdict(set)
-        self.tokens: dict[str, set[str]] = defaultdict(set)
         # Allocate samples proportionally
         self.schema_allocation = int(self.limit * 0.5)  # 60% for schema diversity
         self.country_allocation = int(self.limit * 0.3)  # 20% for country diversity
@@ -176,18 +174,11 @@ class SampleAggregator:
                 collected = self._collect_result(result.fetchall())
                 log.info(f"Collected {collected} random other names")
 
-            # collect longer tokens
-            log.info("Building tokens ...")
-            for name, schemata in self.names.items():
-                for token in tokenize_name(name, 8):
-                    self.tokens[token].update(schemata)
-
             log.info(
                 "Query sample data complete.",
                 took=t.took,
                 collected=self.collected,
                 names=len(self.names),
-                tokens=len(self.tokens),
             )
 
     def _collect_result(self, rows: Iterable[Row]) -> int:
@@ -215,20 +206,14 @@ class SampleAggregator:
         return "__label__UNK", name
 
     def iterate(self) -> Generator[FT, None, None]:
-        """Iterate names and tokens with added 10% synthetic noise. If a name or
+        """Iterate names with added 10% synthetic noise. If a name or
         token has more than 1 schemata, the label will be UNK"""
         names = list(self.names.keys())
         random.shuffle(names)
-        tokens = list(self.tokens.keys())
-        random.shuffle(tokens)
         for name in names:
             yield self._build_ft(name, self.names[name])
             if random.randint(0, 100) < 11:
                 yield self._build_ft(add_noise(name), self.names[name])
-        for token in tokens:
-            yield self._build_ft(token, self.tokens[token])
-            if random.randint(0, 100) < 11:
-                yield self._build_ft(add_noise(token), self.tokens[token])
 
     def create_training_data(self) -> tuple[Path, Path]:
         """Create training and validation data files with 10% synthetic noise"""

@@ -17,7 +17,6 @@ def test_sample_aggregator(store, eu_authorities):
     # Check we collected data
     assert sampler.collected > 0
     assert len(sampler.names) > 0
-    assert len(sampler.tokens) > 0
 
     # Check sample format from iterate
     samples = list(sampler.iterate())
