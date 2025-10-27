@@ -5,6 +5,13 @@ from typing import Generator, Literal, Self, TypeAlias
 from followthemoney import model
 from followthemoney.exc import InvalidData
 from pydantic import BaseModel, computed_field
+from rigour.names import (
+    Name,
+    pick_name,
+    remove_obj_prefixes,
+    remove_org_prefixes,
+    remove_person_prefixes,
+)
 
 NER_TAG: TypeAlias = Literal["PER", "ORG", "LOC", "OTHER"]
 SCHEMA_NER: dict[str, NER_TAG] = {
@@ -34,14 +41,30 @@ def get_common_schema(*schemata: str) -> str:
     return "LegalEntity"
 
 
+def name_key(name: str) -> str:
+    key = Name(name).norm_form
+    key = remove_obj_prefixes(key)
+    key = remove_org_prefixes(key)
+    key = remove_person_prefixes(key)
+    return key
+
+
+def schema_to_ner(schema: str) -> NER_TAG:
+    return SCHEMA_NER.get(schema, "OTHER")
+
+
 class Doc(BaseModel):
-    caption: str
+    key: str
     names: set[str] = set()
     aliases: set[str] = set()
     countries: set[str] = set()
     schemata: set[str] = set()
-    symbols: set[str] = set()
     score: float = 0
+
+    @computed_field
+    @property
+    def ner_tags(self) -> set[NER_TAG]:
+        return {schema_to_ner(s) for s in self.schemata}
 
 
 Docs: TypeAlias = Generator[Doc, None, None]
@@ -52,21 +75,17 @@ class Result(Doc):
 
     @classmethod
     def from_doc(cls, doc: Doc, q: str, score: float) -> Self:
-        return cls(
-            caption=doc.caption,
-            names=doc.names,
-            aliases=doc.aliases,
-            countries=doc.countries,
-            query=q,
-            score=score,
-            schemata=doc.schemata,
-            symbols=doc.symbols,
-        )
+        return cls(query=q, score=score, **doc.model_dump(exclude={"score"}))
 
     @computed_field
     @property
     def common_schema(self) -> str:
         return get_common_schema(*self.schemata)
+
+    @computed_field
+    @property
+    def caption(self) -> str | None:
+        return pick_name(list(self.names))
 
 
 class SchemaPrediction(BaseModel):
@@ -77,4 +96,4 @@ class SchemaPrediction(BaseModel):
     @computed_field
     @property
     def ner_tag(self) -> NER_TAG:
-        return SCHEMA_NER.get(self.label, "OTHER")
+        return schema_to_ner(self.label)

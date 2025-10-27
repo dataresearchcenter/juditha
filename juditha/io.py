@@ -4,8 +4,9 @@ from anystore.types import Uri
 from ftmq import Query
 from ftmq.io import smart_read_proxies
 from ftmq.model.dataset import Catalog, Dataset
+from ftmq.util import make_entity
 
-from juditha.store import Doc, Store, get_store
+from juditha.store import Store, get_store
 
 log = get_logger(__name__)
 
@@ -61,10 +62,24 @@ def load_catalog(
 
 
 def load_names(uri: Uri, store: Store | None = None, schema: str | None = None) -> None:
-    schemata = {schema} if schema else set()
-    with store or get_store() as store:
-        for name in logged_items(
-            smart_stream(uri), "Load", item_name="Name", logger=log, uri=uri
+    store = store or get_store()
+    schema = schema or "LegalEntity"
+    with store.aggregator:
+        for i, name in enumerate(
+            logged_items(
+                smart_stream(uri, mode="r"),
+                "Load",
+                item_name="Name",
+                logger=log,
+                uri=uri,
+            )
         ):
             name = name.strip()
-            store.put(Doc(caption=name, names={name}, schemata=schemata))
+            entity = make_entity(
+                {
+                    "id": f"name-{i}",
+                    "schema": schema,
+                    "properties": {"name": [name]},
+                }
+            )
+            store.aggregator.put(entity)

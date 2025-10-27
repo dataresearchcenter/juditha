@@ -3,14 +3,14 @@ from pathlib import Path
 from ftmq.util import make_entity
 from typer.testing import CliRunner
 
-from juditha import io, lookup
+from juditha import io
 from juditha.cli import cli
-from juditha.store import get_store
+from juditha.store import get_store, lookup
 
 runner = CliRunner()
 
 
-def test_io(fixtures_path, store):
+def test_juditha_base(fixtures_path, store):
     io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
     store.build()
     name = "European Parliament"
@@ -28,8 +28,16 @@ def test_io(fixtures_path, store):
     assert res2.query == name.lower()
     assert res2.score == res.score
 
-    assert lookup("European", uri=store.uri) is None
-    assert lookup("European", threshold=0.5, uri=store.uri) is not None
+    # fuzzy match
+    res_fuzzy = lookup("European Parlament", uri=store.uri)
+    assert res_fuzzy is not None
+    assert res_fuzzy.score < 1
+
+    # lower threshold
+    assert lookup("European Parlment") is None
+    res_fuzzy = lookup("European Parlment", threshold=0.5, uri=store.uri)
+    assert res_fuzzy is not None
+    assert 0.5 < res_fuzzy.score < 1
 
     jane = make_entity(
         {
@@ -47,7 +55,6 @@ def test_io(fixtures_path, store):
     store.build()
     jane = lookup("Jane Doe", uri=store.uri)
     assert jane is not None
-    assert "[NAME:1682564]" in jane.symbols
     assert "mt" in jane.countries
     assert "jani" in jane.aliases
 
@@ -55,13 +62,24 @@ def test_io(fixtures_path, store):
     assert lookup("Jane Doe", schemata=("Company",), uri=store.uri) is None
     assert lookup("Jani Doe", uri=store.uri) is None
 
+    # fuzzy jane
+    res = lookup("Jane Dae", uri=store.uri, threshold=0)
+    assert res is not None
+    assert res.names == {"Jane Doe"}
+    assert res.score < 1
 
-def test_cli(monkeypatch, fixtures_path: Path, tmp_path):
-    monkeypatch.setenv("JUDITHA_URI", tmp_path)
+
+def test_juditha_cli(monkeypatch, fixtures_path: Path, tmp_path):
+    # Need to clear cache to pick up new env var
     get_store.cache_clear()
+    # Set env var
+    monkeypatch.setenv("JUDITHA_URI", tmp_path)
 
+    # Run CLI commands
+    # Note: Each invoke creates/reuses a cached Store with the same LevelDB connection
     runner.invoke(cli, ["load-names", "-i", str(fixtures_path / "names.txt")])
     runner.invoke(cli, ["build"])
+
     res = runner.invoke(cli, ["lookup", "Jane Doe"])
     assert res.exit_code == 0
     assert "Jane Doe" in res.output
@@ -82,6 +100,7 @@ def test_cli(monkeypatch, fixtures_path: Path, tmp_path):
 
 
 def test_store_env(monkeypatch, tmp_path):
+    # Need to clear cache to pick up new env var
     get_store.cache_clear()
     monkeypatch.setenv("JUDITHA_URI", tmp_path)
     store = get_store()

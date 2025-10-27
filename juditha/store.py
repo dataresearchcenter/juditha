@@ -10,10 +10,9 @@ from anystore.logging import get_logger
 from anystore.types import Uri
 from anystore.util import join_uri, model_dump, path_from_uri, rm_rf
 from rapidfuzz import process
-from rigour.names import Name
 
 from juditha.aggregator import Aggregator
-from juditha.model import NER_TAG, Doc, Result
+from juditha.model import NER_TAG, Doc, Result, name_key
 from juditha.settings import Settings
 from juditha.validate import Validator
 
@@ -26,20 +25,15 @@ log = get_logger(__name__)
 settings = Settings()
 
 
-def clean_name(name: str) -> str:
-    n = Name(name)
-    return n.norm_form
-
-
 @cache
 def make_schema() -> tantivy.Schema:
     schema_builder = tantivy.SchemaBuilder()
+    # Use raw tokenizer for names so they're indexed as complete strings for fuzzy matching
+    schema_builder.add_text_field("key", tokenizer_name="raw", stored=True)
     schema_builder.add_text_field("schemata", tokenizer_name="raw", stored=True)
-    schema_builder.add_text_field("caption", stored=True)
-    schema_builder.add_text_field("names", stored=True)
-    schema_builder.add_text_field("aliases", stored=True)
+    schema_builder.add_text_field("names", tokenizer_name="raw", stored=True)
+    schema_builder.add_text_field("aliases", tokenizer_name="raw", stored=True)
     schema_builder.add_text_field("countries", tokenizer_name="raw", stored=True)
-    schema_builder.add_json_field("symbols", tokenizer_name="raw", stored=True)
     return schema_builder.build()
 
 
@@ -97,7 +91,7 @@ class Store:
         with self as store:
             count = self.aggregator.count
             for doc in logged_items(
-                self.aggregator, "Write", item_name="Doc", logger=log, total=count
+                self.aggregator, "Indexing", item_name="Doc", logger=log, total=count
             ):
                 store.put(doc)
         # build validation tokens
@@ -113,25 +107,43 @@ class Store:
         self.buffer = []
 
     def _search(
-        self, q: str, clean_q: str, query: tantivy.Query, limit: int, threshold: float
+        self,
+        q: str,
+        clean_q: str,
+        query: tantivy.Query,
+        limit: int,
+        threshold: float,
+        schemata: Iterable[str] | None = None,
     ) -> Generator[Result, None, None]:
         searcher = self.index.searcher()
         result = searcher.search(query, limit)
         docs: list[Doc] = []
         for item in result.hits:
-            doc = searcher.doc(item[1])
-            data = doc.to_dict()
-            data["caption"] = doc.get_first("caption")
-            data["schema"] = doc.get_first("schema")
-            doc = Doc(**data)
-            score = jellyfish.jaro_similarity(clean_q, doc.caption.lower())
+            tdoc = searcher.doc(item[1])
+            data = tdoc.to_dict()
+
+            # Convert lists to sets and handle fields properly
+            doc = Doc(
+                key=tdoc.get_first("key") or "",
+                names=set(data.get("names", [])),
+                aliases=set(data.get("aliases", [])),
+                countries=set(data.get("countries", [])),
+                schemata=set(data.get("schemata", [])),
+            )
+
+            # Schema filtering: skip docs that don't match requested schemata
+            if schemata and not doc.schemata.intersection(schemata):
+                continue
+
+            # Compare normalized forms for scoring
+            score = jellyfish.jaro_similarity(clean_q, doc.key)
             if score > threshold:
                 yield Result.from_doc(doc, q, score)
             else:
                 docs.append(doc)
         # now try other names
         for doc in docs:
-            res = process.extractOne(clean_q, [n.lower() for n in doc.names])
+            res = process.extractOne(clean_q, [name_key(n) for n in doc.names])
             if res is not None:
                 score = res[:2][1] / 100
                 if score > threshold:
@@ -145,36 +157,35 @@ class Store:
         limit: int | None = None,
         schemata: Iterable[str] | None = None,
     ) -> Result | None:
-        threshold = threshold or settings.fuzzy_threshold
-        limit = limit or settings.limit
-        clean_q = clean_name(q)
+        threshold = threshold if threshold is not None else settings.fuzzy_threshold
+        limit = limit if limit is not None else settings.limit
+        clean_q = name_key(q)
         if not clean_q or len(clean_q) < settings.min_length:
             return
 
-        # Build schema filter if provided
-        schema_filter = ""
-        if schemata:
-            schema_terms = " OR ".join(f'schemata:"{schema}"' for schema in schemata)
-            schema_filter = f" AND ({schema_terms})"
+        # Build fuzzy query for the complete name with field boosting
+        # key field boosted 3x, names 2x, aliases 1x
+        field_boosts = {"key": 3.0, "names": 2.0, "aliases": 1.0}
 
-        # 1. try exact caption
-        query_str = f'"{clean_q}"{schema_filter}'
-        query = self.index.parse_query(query_str, ["caption"])
-        for res in self._search(q, clean_q, query, limit, threshold):
-            return res
+        # Create fuzzy query for each field matching the complete name
+        field_queries = []
+        for field, boost in field_boosts.items():
+            fuzzy_q = tantivy.Query.fuzzy_term_query(
+                self.index.schema,
+                field,
+                clean_q,
+                distance=2,
+                transposition_cost_one=True,
+                prefix=False,
+            )
+            # Boost the field query
+            boosted_q = tantivy.Query.boost_query(fuzzy_q, boost)
+            field_queries.append((tantivy.Occur.Should, boosted_q))
 
-        # 2. lookup other names
-        query_str = f'"{clean_q}"{schema_filter}'
-        query = self.index.parse_query(query_str, ["names", "aliases"])
-        for res in self._search(q, clean_q, query, limit, threshold):
-            return res
+        # Combine all field queries with OR - Tantivy's BM25 will rank by relevance
+        query = tantivy.Query.boolean_query(field_queries)
 
-        # 3. more fuzzy - broad term search with OR  FIXME doesn't seem to work
-        terms = clean_q.split()
-        terms = " OR ".join(f"{term}~1" for term in terms)
-        query_str = f"{terms}{schema_filter}"
-        query = self.index.parse_query(query_str, ["caption", "names", "aliases"])
-        for res in self._search(q, clean_q, query, limit, threshold):
+        for res in self._search(q, clean_q, query, limit, threshold, schemata):
             return res
 
     def validate(self, name: str, tag: NER_TAG) -> bool:
@@ -183,7 +194,7 @@ class Store:
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *_args: object) -> None:
         self.flush()
 
 
@@ -200,11 +211,11 @@ def lookup(
     uri: Uri | None = None,
     schemata: tuple[str, ...] | None = None,
 ) -> Result | None:
-    store = get_store(uri)
+    store = get_store(uri) if uri is not None else get_store()
     return store.search(q, threshold, schemata=set(schemata) if schemata else None)
 
 
 @lru_cache(100_000)
 def validate_name(name: str, tag: NER_TAG, uri: Uri | None = None) -> bool:
-    store = get_store(uri)
+    store = get_store(uri) if uri is not None else get_store()
     return store.validate(name, tag)
