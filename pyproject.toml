@@ -38,7 +38,7 @@ pytest = "^8.4.2"
 pytest-coverage = "^0.0"
 pytest-env = "^1.0.1"
 httpx = ">=0.25.0"
-mypy = "^1.16.1"
+mypy = "^1.19.1"
 uvicorn = "^0.40.0"
 
 [build-system]
