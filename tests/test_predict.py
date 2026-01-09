@@ -149,8 +149,8 @@ def test_predict_schema_no_predictions(mock_load_model):
 def test_default_normalize():
     """Test the default normalization function"""
     assert predict.default_normalize("John Doe") == "john doe"
-    assert predict.default_normalize("COMPANY INC.") == "company inc."
-    assert predict.default_normalize("  Mixed Case  ") == "  mixed case  "
+    assert predict.default_normalize("COMPANY INC.") == "company inc"
+    assert predict.default_normalize("  Mixed Case  ") == "mixed case"
 
 
 @patch("random.choice")
