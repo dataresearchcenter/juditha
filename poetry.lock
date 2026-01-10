@@ -1175,6 +1175,7 @@ click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.3.4,<5.0.0"
 nomenklatura = ">=4.3.2,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
+plyvel = {version = ">=1.5.1,<2.0.0", optional = true, markers = "extra == \"level\""}
 pydantic = ">=2.11.3,<3.0.0"
 pyicu = ">=2.15.2,<3.0.0"
 rigour = ">=1.5.0,<2.0.0"
@@ -2516,6 +2517,23 @@ files = [
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["coverage", "pytest", "pytest-benchmark"]
+
+[[package]]
+name = "plyvel"
+version = "1.5.1"
+description = "Plyvel, a fast and feature-rich Python interface to LevelDB"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "plyvel-1.5.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a8394aed946000fca2c92d7ae8537d9907c8169debf7f55c7ecb53751f3bf4e7"},
+    {file = "plyvel-1.5.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:54f364f566470f5acaed0a00fea8860736120a711214190a17ee73dcbe1a2261"},
+    {file = "plyvel-1.5.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8b26b09d6ae9c679c877153aa4bd7f763e5e983a61b7c0c955653e7a494b6126"},
+    {file = "plyvel-1.5.1-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fc224b38a324fa7b5d5384e649fa00b4eeb053966f82515198754e9e77ad6d61"},
+    {file = "plyvel-1.5.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ba466219943e657998cc1f67ddeeb432809596736419e9082f9c7f921eaf3202"},
+    {file = "plyvel-1.5.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3c87ceb9362548bb9acca2deec291893928dd9042048f040db76353ae41a45af"},
+    {file = "plyvel-1.5.1.tar.gz", hash = "sha256:3caf6009e4fc24fbf8712d3f5ef3da7e56495c26a488df2161218fc34e46019c"},
+]
 
 [[package]]
 name = "pre-commit"
@@ -4329,4 +4347,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "563c659a896a3afaf8afd3eab507afea1288a4ea66ad58285e7d25d98ba15e55"
+content-hash = "09c9b3978f7509387205606d24db941ee5267c47fcdeb73e6098eb257362cdc8"

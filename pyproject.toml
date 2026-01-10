@@ -17,7 +17,7 @@ requires-python = ">=3.11,<4"
 dependencies = [
     "anystore (>=0.4.2,<0.5.0)",
     "followthemoney (>=4.5.0,<5.0.0)",
-    "ftmq (>=4.3.4,<5.0.0)",
+    "ftmq[level] (>=4.3.4,<5.0.0)",
     "tantivy (>=0.25.1,<0.26.0)",
     "jellyfish (>=1.2.1,<2.0.0)",
     "fasttext-numpy2 (>=0.10.4,<0.11.0)",
