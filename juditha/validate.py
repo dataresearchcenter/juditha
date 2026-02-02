@@ -4,7 +4,8 @@ eliminates NER noise by testing if the extracted name contains any of a known
 token of a huge set of names.
 """
 
-from typing import TypeAlias
+from collections.abc import Generator
+from typing import TextIO, TypeAlias
 
 from anystore.io import logged_items
 from anystore.logging import get_logger
@@ -40,20 +41,32 @@ def serialize_tokens(tokens: Tokens) -> bytes:
     return "\n".join(lines).encode("utf-8")
 
 
-def deserialize_tokens(data: bytes) -> Tokens:
+def parse_token_line(fp: TextIO) -> Generator[str, None, None]:
+    """Yield null-delimited tokens from a single line. Stops at newline or EOF."""
+    token = ""
+    while True:
+        c = fp.read(1)
+        if not c or c == "\n":
+            if token:
+                yield token
+            return
+        if c == NULL:
+            yield token
+            token = ""
+        else:
+            token += c
+
+
+def deserialize_tokens(fp: TextIO) -> Tokens:
     """Deserialize null-byte delimited format to token sets."""
-    tokens: Tokens = {}
-    for line in data.decode("utf-8").split("\n"):
-        if not line:
-            continue
-        parts = line.split(NULL)
-        tag = parts[0]
-        if tag == "PER":
-            tokens["PER"] = set(parts[1:]) if len(parts) > 1 else set()
-        elif tag == "ORG":
-            tokens["ORG"] = set(parts[1:]) if len(parts) > 1 else set()
-        elif tag == "LOC":
-            tokens["LOC"] = set(parts[1:]) if len(parts) > 1 else set()
+    tokens: Tokens = {"PER": set(), "ORG": set(), "LOC": set()}
+    while True:
+        line_tokens = parse_token_line(fp)
+        tag = next(line_tokens, None)
+        if tag is None:
+            break
+        if tag in tokens:
+            tokens[tag].update(line_tokens)  # type: ignore[index]
     return tokens
 
 
@@ -98,27 +111,25 @@ def build_tokens(aggregator: Aggregator) -> Tokens:
 
 
 class Validator:
+    KEY = "tokens.txt"
+
     def __init__(self, uri: Uri, aggregator: Aggregator) -> None:
         self.uri = uri
         self.aggregator = aggregator
         self.store = get_store(self.uri)
         self._tokens: Tokens = {}
 
-    def _cache_key(self) -> str:
-        return f"validate_tokens_{self.aggregator.count_rows}.txt"
-
     def get_tokens(self) -> Tokens:
         if not self._tokens:
-            key = self._cache_key()
-            log.info("Loading tokens ...", uri=join_uri(self.uri, key))
+            log.info("Loading tokens ...", uri=join_uri(self.uri, self.KEY))
             try:
-                data = self.store.get(key, serialization_mode="raw")
-                self._tokens = deserialize_tokens(data)
+                with self.store.open(self.KEY, mode="r") as io:
+                    self._tokens = deserialize_tokens(io)
             except Exception:
                 # Cache miss - build and store
                 self._tokens = build_tokens(self.aggregator)
                 self.store.put(
-                    key, serialize_tokens(self._tokens), serialization_mode="raw"
+                    self.KEY, serialize_tokens(self._tokens), serialization_mode="raw"
                 )
         return self._tokens
 
