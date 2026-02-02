@@ -37,21 +37,18 @@ def make_schema() -> tantivy.Schema:
     return schema_builder.build()
 
 
-@cache
 def ensure_db_path(uri: Uri) -> str:
     path = path_from_uri(uri) / NAMES
     path.parent.mkdir(exist_ok=True, parents=True)
     return str(path)
 
 
-@cache
 def ensure_index_path(uri: Uri) -> str:
     path = path_from_uri(uri) / INDEX
     path.mkdir(exist_ok=True, parents=True)
     return str(path)
 
 
-@cache
 def ensure_tokens_path(uri: Uri) -> str:
     path = path_from_uri(uri) / TOKENS
     path.mkdir(exist_ok=True, parents=True)
@@ -88,6 +85,7 @@ class Store:
             uri = join_uri(self.uri, INDEX)
             log.info("Cleaning up outdated store ...", uri=uri)
             rm_rf(uri)
+            self.index = tantivy.Index(make_schema(), ensure_index_path(self.uri))
         with self as store:
             count = self.aggregator.count
             for doc in logged_items(
