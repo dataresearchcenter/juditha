@@ -943,13 +943,13 @@ pyflakes = ">=3.4.0,<3.5.0"
 
 [[package]]
 name = "followthemoney"
-version = "4.5.1"
+version = "4.6.0"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "followthemoney-4.5.1-py3-none-any.whl", hash = "sha256:1407e6d89d6401938d49b004dc1aa1d2794f18fb88dcf42a96d18cf0ea9d182a"},
+    {file = "followthemoney-4.6.0-py3-none-any.whl", hash = "sha256:0cbb79194a4ce1bae81553f14a42ce281051e2056a330aea6f9419be37a9ba4b"},
 ]
 
 [package.dependencies]
@@ -957,7 +957,7 @@ babel = ">=2.14.0,<3.0.0"
 banal = ">=1.0.6,<1.1.0"
 click = ">=8.0,<9.0.0"
 networkx = ">=2.5,<3.5"
-normality = ">=3.0.1,<4.0.0"
+normality = ">=3.1.0,<4.0.0"
 openpyxl = ">=3.0.5,<4.0.0"
 orjson = ">=3.10.0,<4.0"
 phonenumbers = ">=8.12.22,<10.0.0"
@@ -965,7 +965,7 @@ prefixdate = ">=0.5.0,<1.0.0"
 pydantic = ">=2.11.0,<3.0.0"
 pytz = ">=2021.1"
 pyyaml = ">=5.0.0,<7.0.0"
-rdflib = ">=6.2.0,<7.6.0"
+rdflib = ">=6.2.0,<7.7.0"
 requests = ">=2.21.0,<3.0.0"
 rigour = ">=1.6.0,<2.0.0"
 sqlalchemy = {version = ">=2.0.0,<3.0.0", extras = ["mypy"]}
@@ -2233,13 +2233,13 @@ redis = ["redis (>5.0.0,<8.0.0)"]
 
 [[package]]
 name = "normality"
-version = "3.0.2"
+version = "3.1.0"
 description = "Micro-library to normalize text strings"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "normality-3.0.2-py3-none-any.whl", hash = "sha256:f013db2fdd831f26ae8b23f2e2652501ff0f9bdcb24d889ba5dc87c88a595288"},
+    {file = "normality-3.1.0-py3-none-any.whl", hash = "sha256:850419eb8cbc43c79afe005b93155cf41c5dd26c7d6e2a0aa6452f3210c0b338"},
 ]
 
 [package.dependencies]
@@ -2249,7 +2249,7 @@ charset-normalizer = ">=2.0.0"
 pyicu = ">=2.10.0"
 
 [package.extras]
-dev = ["build", "mypy", "pytest", "types-chardet", "wheel"]
+dev = ["build", "mypy", "pytest", "ruff", "types-chardet", "wheel"]
 
 [[package]]
 name = "numpy"
