@@ -989,13 +989,13 @@ pyflakes = ">=3.4.0,<3.5.0"
 
 [[package]]
 name = "followthemoney"
-version = "4.6.0"
+version = "4.7.0"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "followthemoney-4.6.0-py3-none-any.whl", hash = "sha256:0cbb79194a4ce1bae81553f14a42ce281051e2056a330aea6f9419be37a9ba4b"},
+    {file = "followthemoney-4.7.0-py3-none-any.whl", hash = "sha256:261f2e66dbc0518c7a79fecacc86a45a3d5d10ef816d966eb4b2462a66717a90"},
 ]
 
 [package.dependencies]
