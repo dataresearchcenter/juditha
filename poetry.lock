@@ -295,14 +295,14 @@ trio = ["trio (>=0.31.0) ; python_version < \"3.10\"", "trio (>=0.32.0) ; python
 
 [[package]]
 name = "anystore"
-version = "1.1.4"
+version = "1.1.6"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-1.1.4-py3-none-any.whl", hash = "sha256:8e14e8e4682ed96e3ec62975b3d858543be4a44a56454cf0d56c6b2e8686a4f4"},
-    {file = "anystore-1.1.4.tar.gz", hash = "sha256:1641538ca220395945082e784265f571aea8a60ec883fbdac5d36d43e6bd9dc0"},
+    {file = "anystore-1.1.6-py3-none-any.whl", hash = "sha256:b00d5f50949dc41bc859264d3e67677db795c80122205b6312ab380fcb36fee2"},
+    {file = "anystore-1.1.6.tar.gz", hash = "sha256:b6023897ffd7b48b28b633fb580d95961ac39aba4019f563088a00415b60ab87"},
 ]
 
 [package.dependencies]
@@ -989,13 +989,13 @@ pyflakes = ">=3.4.0,<3.5.0"
 
 [[package]]
 name = "followthemoney"
-version = "4.6.0"
+version = "4.7.0"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "followthemoney-4.6.0-py3-none-any.whl", hash = "sha256:0cbb79194a4ce1bae81553f14a42ce281051e2056a330aea6f9419be37a9ba4b"},
+    {file = "followthemoney-4.7.0-py3-none-any.whl", hash = "sha256:261f2e66dbc0518c7a79fecacc86a45a3d5d10ef816d966eb4b2462a66717a90"},
 ]
 
 [package.dependencies]
@@ -1202,22 +1202,22 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.6.0"
+version = "4.7.1"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<3.14,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.6.0-py3-none-any.whl", hash = "sha256:5568c742d4b27f16de5ab8c62de6d46f606ac9d564973a9da729540261af851c"},
-    {file = "ftmq-4.6.0.tar.gz", hash = "sha256:02d99f3d508220dcdf9f4948264ac2bc4aba8e926fe8ebd3a74faaec483fc266"},
+    {file = "ftmq-4.7.1-py3-none-any.whl", hash = "sha256:451fa40547e2f94b71212df925364071794ebd225deb4d63fe98759657406112"},
+    {file = "ftmq-4.7.1.tar.gz", hash = "sha256:5fbbaac81cb7a78dc6dbe7c72070a83431182491c9e02bd783aab36c2e4ba092"},
 ]
 
 [package.dependencies]
-anystore = ">=1.1.4,<2.0.0"
+anystore = ">=1.1.6,<2.0.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
-followthemoney = ">=4.6.0,<5.0.0"
-nomenklatura = ">=4.7.1,<5.0.0"
+followthemoney = ">=4.7.0,<5.0.0"
+nomenklatura = ">=4.7.3,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
 plyvel = {version = ">=1.5.1,<2.0.0", optional = true, markers = "extra == \"level\""}
 pydantic = ">=2.11.3,<3.0.0"
@@ -1226,7 +1226,7 @@ rigour = ">=1.7.5,<2.0.0"
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
-lake = ["deltalake (>=1.4.2,<2.0.0)", "duckdb (>=1.5.0,<2.0.0)", "pandas (>=3.0.1,<4.0.0)", "pyarrow (>=23.0.1,<24.0.0)"]
+lake = ["deltalake (>=1.5.0,<2.0.0)", "duckdb (>=1.5.1,<2.0.0)", "pandas (>=3.0.2,<4.0.0)", "pyarrow (>=23.0.1,<24.0.0)"]
 level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.36,<3.0.0)"]
 redis = ["fakeredis (>=2.26.2,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
@@ -2404,13 +2404,13 @@ files = [
 
 [[package]]
 name = "nomenklatura"
-version = "4.7.1"
+version = "4.7.3"
 description = "Make record linkages in followthemoney data."
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "nomenklatura-4.7.1-py3-none-any.whl", hash = "sha256:7c31218b1060cfe5cc0ee550da816cfa14936a2b2128cb0da8d7ede29a06c8e6"},
+    {file = "nomenklatura-4.7.3-py3-none-any.whl", hash = "sha256:ee2565af7a20f1a70ccc980f3e012f688093294c0e86a14cf8ebdfadaa490706"},
 ]
 
 [package.dependencies]
