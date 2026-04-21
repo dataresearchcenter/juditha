@@ -295,14 +295,14 @@ trio = ["trio (>=0.31.0) ; python_version < \"3.10\"", "trio (>=0.32.0) ; python
 
 [[package]]
 name = "anystore"
-version = "1.1.4"
+version = "1.1.7"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-1.1.4-py3-none-any.whl", hash = "sha256:8e14e8e4682ed96e3ec62975b3d858543be4a44a56454cf0d56c6b2e8686a4f4"},
-    {file = "anystore-1.1.4.tar.gz", hash = "sha256:1641538ca220395945082e784265f571aea8a60ec883fbdac5d36d43e6bd9dc0"},
+    {file = "anystore-1.1.7-py3-none-any.whl", hash = "sha256:84d6f99371ce98a2c3ef60b84d68a24774df54c5a33578d982f8c93a8d3635b4"},
+    {file = "anystore-1.1.7.tar.gz", hash = "sha256:3183228e559f0d28b23f11ab0ecefe5e8612bbc67e5d466abdd318774ee13184"},
 ]
 
 [package.dependencies]
@@ -316,7 +316,7 @@ pyaml = ">=25.5.0,<26.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.7.1,<3.0.0"
 rich = ">=10.0.0,<15.0.0"
-rigour = ">=1.0.0,<2.0.0"
+rigour = ">=1.8.2,<2.0.0"
 s3fs = ">2023.10,<2027"
 structlog = ">=22.0.0,<26.0.0"
 tqdm = ">=4.67.1,<5.0.0"
@@ -3756,19 +3756,18 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rigour"
-version = "1.7.5"
+version = "1.8.2"
 description = "Financial crime domain data validation and normalization library."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "rigour-1.7.5-py3-none-any.whl", hash = "sha256:240591d88d2cf0d667b798ae2bfaa1cfd5ba07d7cf6ab64cc87fea30c9965455"},
+    {file = "rigour-1.8.2-py3-none-any.whl", hash = "sha256:21a375947ef9a1137452d3e1678a99ee364ef06f1de150ff39fe4a2d3179081a"},
 ]
 
 [package.dependencies]
 ahocorasick-rs = ">=0.22.0,<1.1.0"
 babel = ">=2.9.1,<3.0.0"
-banal = ">=1.0.6,<1.1.0"
 fingerprints = ">=1.0.1,<2.0.0"
 jellyfish = ">=1.0.0,<2.0.0"
 jinja2 = ">=3.1.0,<4.0.0"
@@ -4631,4 +4630,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "d1c883cefc659b60560d4921645643d7322b2233d57a3ababce5360da3ae1b01"
+content-hash = "e70e9c97d8664423d12d7a215c5d70f1547811c4b33a1e06edec767de7e63941"
