@@ -76,7 +76,7 @@ To mark the compatibility with [followthemoney](https://followthemoney.tech), `j
 
 `juditha`, (C) 2024 investigativedata.io
 
-`juditha`, (C) 2025 [Data and Research Center – DARC](https://dataresearchcenter.org)
+`juditha`, (C) 2025 [Data and Research Center – DARC](https://dataresearchcenter.org),2026
 
 `juditha` is licensed under the AGPLv3 or later license.
 
