@@ -49,10 +49,6 @@ log = get_logger(__name__)
 settings = Settings()
 
 
-def _is_http_uri(uri: str) -> bool:
-    return uri.startswith("http://") or uri.startswith("https://")
-
-
 @cache
 def make_schema() -> tantivy.Schema:
     """Build the tantivy schema for name lookup.
@@ -333,64 +329,10 @@ class Store:
         self.flush()
 
 
-class RemoteStore:
-    """HTTP client that delegates lookup/extract to a running Juditha API."""
-
-    def __init__(self, base_url: str):
-        import httpx
-
-        self.base_url = base_url.rstrip("/")
-        self._client = httpx.Client(base_url=self.base_url, timeout=30)
-        log.info("👋 (remote)", store=self.base_url)
-
-    def search(
-        self,
-        q: str,
-        threshold: float | None = None,
-        limit: int | None = None,
-        schemata: Iterable[str] | None = None,
-    ) -> Result | None:
-        params: dict[str, float | list[str]] = {}
-        if threshold is not None:
-            params["threshold"] = threshold
-        if schemata is not None:
-            params["schemata"] = list(schemata)
-        resp = self._client.get(f"/lookup/{q}", params=params)
-        if resp.status_code == 404:
-            return None
-        resp.raise_for_status()
-        return Result(**resp.json())
-
-    def extract(self, text: str) -> list[Mention]:
-        resp = self._client.post("/extract", json={"text": text})
-        resp.raise_for_status()
-        return [Mention(**m) for m in resp.json()]
-
-    @property
-    def aggregator(self) -> None:
-        raise NotImplementedError("RemoteStore does not support aggregator access")
-
-    @property
-    def extractor(self) -> None:
-        raise NotImplementedError("RemoteStore does not support extractor access")
-
-    def build(self) -> None:
-        raise NotImplementedError("RemoteStore does not support build")
-
-    def __enter__(self) -> Self:
-        return self
-
-    def __exit__(self, *_args: object) -> None:
-        self._client.close()
-
-
 @cache
-def get_store(uri: str | None = None) -> Store | RemoteStore:
+def get_store(uri: str | None = None) -> Store:
     settings = Settings()
-    uri = uri or settings.uri
-    if _is_http_uri(uri):
-        return RemoteStore(uri)
-    return Store(uri)
+    return Store(uri or settings.uri)
 
 
 @lru_cache(100_000)

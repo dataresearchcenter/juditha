@@ -28,6 +28,3 @@ clean:
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
-
-api:
-	uvicorn juditha.api:app --reload --port 5000

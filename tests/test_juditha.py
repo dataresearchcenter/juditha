@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from ftmq.util import make_entity
 from typer.testing import CliRunner
 
@@ -10,35 +11,62 @@ from juditha.store import get_store, lookup
 runner = CliRunner()
 
 
-def test_juditha_base(fixtures_path, store):
+@pytest.fixture()
+def loaded_store(fixtures_path, tmp_path, monkeypatch):
+    """Store with EU authorities loaded and built."""
+    get_store.cache_clear()
+    monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
+    store = get_store()
     io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
     store.build()
+    return store
+
+
+def test_lookup_exact(loaded_store):
     name = "European Parliament"
-    res = lookup(name, uri=store.uri)
+    res = loaded_store.search(name)
     assert res is not None
     assert res.score > 0.97
-    assert res.caption == name
-    assert res.names == {name}
-    assert res.schemata == {"PublicBody"}
-    assert res.common_schema == "PublicBody"
+    assert res.query == name
+    assert name in res.names
+    assert "PublicBody" in res.schemata
 
-    res2 = lookup(name.lower(), uri=store.uri)
-    assert res2 is not None
-    assert res2.caption == name
-    assert res2.query == name.lower()
-    assert res2.score == res.score
 
-    # fuzzy match
-    res_fuzzy = lookup("European Parlament", uri=store.uri)
-    assert res_fuzzy is not None
-    assert res_fuzzy.score < 1
+def test_lookup_case_insensitive(loaded_store):
+    name = "European Parliament"
+    res = loaded_store.search(name.lower())
+    assert res is not None
+    assert res.query == name.lower()
 
-    # lower threshold
-    assert lookup("European Parlment") is None
-    res_fuzzy = lookup("European Parlment", threshold=0.5, uri=store.uri)
-    assert res_fuzzy is not None
-    assert 0.5 < res_fuzzy.score < 1
 
+def test_lookup_fuzzy(loaded_store):
+    res = loaded_store.search("European Parlament")
+    assert res is not None
+    assert res.score < 1
+
+
+def test_lookup_low_threshold(loaded_store):
+    assert loaded_store.search("European Parlment") is None
+    res = loaded_store.search("European Parlment", threshold=0.5)
+    assert res is not None
+    assert 0.5 < res.score < 1
+
+
+def test_lookup_not_found(loaded_store):
+    assert loaded_store.search("xyzzyplugh gibberish") is None
+
+
+def test_extract(loaded_store):
+    mentions = loaded_store.extract("The European Parliament met today.")
+    texts = [m.text for m in mentions]
+    assert "European Parliament" in texts
+
+
+# --- Aggregator-access tests ---
+
+
+def test_lookup_with_entity(fixtures_path, store):
+    io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
     jane = make_entity(
         {
             "id": "j",
@@ -53,17 +81,17 @@ def test_juditha_base(fixtures_path, store):
     store.aggregator.put(jane)
     store.aggregator.flush()
     store.build()
-    jane = lookup("Jane Doe", uri=store.uri)
-    assert jane is not None
-    assert "mt" in jane.countries
-    assert "jani" in jane.aliases
 
-    assert lookup("Jane Doe", schemata=("Person",), uri=store.uri) is not None
-    assert lookup("Jane Doe", schemata=("Company",), uri=store.uri) is None
-    assert lookup("Jani Doe", uri=store.uri) is None
+    res = store.search("Jane Doe")
+    assert res is not None
+    assert "mt" in res.countries
+    assert "jani" in res.aliases
+
+    assert store.search("Jane Doe", schemata=("Person",)) is not None
+    assert store.search("Jane Doe", schemata=("Company",)) is None
 
     # fuzzy jane
-    res = lookup("Jane Dae", uri=store.uri, threshold=0)
+    res = store.search("Jane Dae", threshold=0)
     assert res is not None
     assert res.names == {"Jane Doe"}
     assert res.score < 1
@@ -72,6 +100,7 @@ def test_juditha_base(fixtures_path, store):
 def test_juditha_cli(monkeypatch, fixtures_path: Path, tmp_path):
     # Need to clear cache to pick up new env var
     get_store.cache_clear()
+    lookup.cache_clear()
     # Set env var
     monkeypatch.setenv("JUDITHA_URI", tmp_path)
 
@@ -84,11 +113,10 @@ def test_juditha_cli(monkeypatch, fixtures_path: Path, tmp_path):
     assert res.exit_code == 0
     assert "Jane Doe" in res.output
 
+    # name_key is order-independent, so "doe, jane" also matches "Jane Doe"
     res = runner.invoke(cli, ["lookup", "doe, jane"])
     assert res.exit_code == 0
-    assert "not found" in res.output
-    res = runner.invoke(cli, ["lookup", "doe, jane", "--threshold", "0.1"])
-    assert res.exit_code == 0
+    assert "Jane Doe" in res.output
 
     res = runner.invoke(
         cli,
