@@ -28,3 +28,7 @@ clean:
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
+
+documentation:
+	zensical build
+	aws --profile nbg1 --endpoint-url https://s3.investigativedata.org s3 sync ./site s3://docs.investigraph.dev/lib/juditha

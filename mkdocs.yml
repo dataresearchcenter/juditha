@@ -1,0 +1,83 @@
+site_name: Juditha
+site_url: https://docs.investigraph.dev/lib/juditha
+repo_url: https://github.com/dataresearchcenter/juditha
+nav:
+  - Intro: index.md
+  - Quickstart: quickstart.md
+  - Usage:
+      - CLI: usage/cli.md
+      - Python: usage/python.md
+  - Load data:
+      - Names: load-data/names.md
+      - Entities: load-data/entities.md
+  - Extra features:
+      - Extract: extras/extract.md
+      - Percolate: extras/percolate.md
+  - Reference:
+      - CLI: cli-reference.md
+      - Settings: reference/settings.md
+      - Benchmark: benchmark.md
+theme:
+  name: material
+  logo: https://cdn.investigativedata.org/style/logos/darc/svg/DARC-Logo-RGB-Horizontal-Neg.svg
+  favicon: https://cdn.investigativedata.org/style/logos/darc/favicon.ico
+  custom_dir: docs/overrides
+  palette:
+    - media: "(prefers-color-scheme)"
+      scheme: slate
+      toggle:
+        icon: lucide/sun
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: lucide/moon
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: lucide/sun
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    # - navigation.footer
+    - toc.follow
+    - content.code.copy
+extra_css:
+  - https://dataresearchcenter.github.io/zensical-theme-darc/stylesheets/darc-zensical.css
+extra:
+  logo_light: https://cdn.investigativedata.org/style/logos/darc/svg/DARC-Logo-RGB-Horizontal-Pos.svg
+  social:
+    - icon: lucide/mail
+      link: mailto:hi@dataresearchcenter.org
+    - icon: lucide/globe
+      link: https://dataresearchcenter.org
+    - icon: simple/github
+      link: https://github.com/dataresearchcenter/juditha
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/dataresearchcenter/
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+  - admonition
+  - pymdownx.tasklist:
+      custom_checkbox: true
+plugins:
+  - search
+  - autorefs
+  # - mkdocstrings:
+  #     default_handler: python
+  #     handlers:
+  #       python:
+  #         options:
+  #           docstring_style: google
+  #           show_root_heading: false
+  #           show_object_full_path: false
