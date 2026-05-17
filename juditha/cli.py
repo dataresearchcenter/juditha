@@ -107,6 +107,27 @@ def cli_extract(
         smart_write_models(output_uri, iter(mentions))
 
 
+@cli.command("percolate")
+def cli_percolate(
+    input_uri: Annotated[
+        str, typer.Option("-i", help="Input uri, default stdin")
+    ] = "-",
+    output_uri: Annotated[
+        str, typer.Option("-o", help="Output uri, default stdout")
+    ] = "-",
+    slop: Annotated[
+        int,
+        typer.Option("--slop", help="Allowed intervening tokens between name parts"),
+    ] = 0,
+):
+    """Percolate text against all stored names (reverse search)."""
+    with ErrorHandler():
+        store = get_store()
+        text = smart_read(input_uri, mode="r")
+        mentions = store.percolate(text, slop=slop)
+        smart_write_models(output_uri, iter(mentions))
+
+
 @cli.command("build")
 def cli_build():
     with ErrorHandler():

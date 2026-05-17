@@ -37,13 +37,15 @@ from rigour.names import Name, NameTypeTag, SymbolCategory, analyze_names
 from juditha.aggregator import Aggregator
 from juditha.extraction import AhoExtractor
 from juditha.model import Doc, Mention, Result
-from juditha.normalizer import name_key
+from juditha.normalizer import name_key, tokenize
+from juditha.percolator import MIN_TOKEN_LENGTH, percolate
 from juditha.settings import Settings
 
 NUM_CPU = multiprocessing.cpu_count()
 INDEX = "tantivy.db"
 NAMES = "names.db"
 AHO = "automaton.txt"
+
 
 log = get_logger(__name__)
 settings = Settings()
@@ -71,6 +73,8 @@ def make_schema() -> tantivy.Schema:
     # phonetic blocking for names unreachable by fuzzy distance 2;
     # index-only, not stored
     b.add_text_field("phonetic", tokenizer_name="raw", stored=False)
+    # percolator blocking: per-token inverted index over names + aliases
+    b.add_text_field("tokens", tokenizer_name="raw", stored=False)
     return b.build()
 
 
@@ -204,11 +208,17 @@ class Store:
         qids: set[str] = set()
         symbols: set[str] = set()
         phonetic: set[str] = set()
+        # tokens powers the percolator blocker — every normalized token
+        # ≥ MIN_TOKEN_LENGTH chars across names + aliases.
+        tokens: set[str] = set()
         for n in names_all:
             q_n, s_n = _name_features(n)
             qids.update(q_n)
             symbols.update(s_n)
             phonetic.update(_phonetic_codes(n))
+            for t in tokenize(n):
+                if len(t.form) >= MIN_TOKEN_LENGTH:
+                    tokens.add(t.form)
 
         fields: dict[str, str | list[str]] = {
             "key": doc.key,
@@ -219,6 +229,7 @@ class Store:
             "qid": sorted(qids),
             "symbols": sorted(symbols),
             "phonetic": sorted(phonetic),
+            "tokens": sorted(tokens),
         }
         self.buffer.append(tantivy.Document(**fields))
         if len(self.buffer) >= 100_000:
@@ -321,6 +332,14 @@ class Store:
 
     def extract(self, text: str) -> list[Mention]:
         return self.extractor.extract(text)
+
+    def percolate(self, text: str, slop: int = 0) -> list[Mention]:
+        """Reverse-search the names index for mentions in `text`.
+
+        Thin wrapper around `juditha.percolator.percolate`. See that
+        module for the algorithm.
+        """
+        return percolate(self._schema, self.index, text, slop=slop)
 
     def __enter__(self) -> Self:
         return self
