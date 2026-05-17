@@ -19,12 +19,18 @@ from anystore.util import Took
 
 from juditha.model import Doc, Mention, get_common_schema
 from juditha.normalizer import tokenize
+from juditha.settings import Settings
 
 log = get_logger(__name__)
 
-# Only multi-token names with sufficient length are indexed
+# Only multi-token names with sufficient total normalized length are
+# indexed. The total-length floor is derived from
+# `settings.min_token_length` (env `JUDITHA_MIN_TOKEN_LENGTH`, default 4)
+# so the Aho-Corasick automaton and the percolator's blocking field share
+# the same notion of "too-short token". The floor is computed as
+# `min_token_length * MIN_TOKEN_COUNT` (default 4 × 2 = 8, matching the
+# historic `MIN_PATTERN_LENGTH`).
 MIN_TOKEN_COUNT = 2
-MIN_PATTERN_LENGTH = 8
 
 
 def _normalize_for_extraction(name: str) -> str:
@@ -71,10 +77,14 @@ class AhoExtractor:
     def add_doc(self, idx: int, doc: Doc) -> None:
         """Add a single doc during incremental build."""
         self._doc_schemata.append(doc.schemata)
+        # Derive the per-pattern floor from the shared min_token_length
+        # setting on every call. Settings() reads env vars; for build
+        # loops the cost is dominated by tokenization anyway.
+        min_pattern_length = Settings().min_token_length * MIN_TOKEN_COUNT
         for name in doc.names | doc.aliases:
             norm = _normalize_for_extraction(name)
             tokens = norm.split()
-            if len(tokens) >= MIN_TOKEN_COUNT and len(norm) >= MIN_PATTERN_LENGTH:
+            if len(tokens) >= MIN_TOKEN_COUNT and len(norm) >= min_pattern_length:
                 if norm not in self._pattern_docs:
                     self._pattern_docs[norm] = set()
                 self._pattern_docs[norm].add(idx)

@@ -8,10 +8,12 @@ time by `Store.put`. At query time we:
    also ICU-normalizes, so the blocking set already shares the same
    normalization as the indexed tokens — no extra normalization pass
    is needed here).
-2. Issue a `term_set_query` over `tokens` against the names index to
-   pull candidate Docs that share at least one normalized token with
-   the input text. Tantivy's BM25 ranks docs sharing rarer/multiple
-   tokens higher, which is what the percolator wants.
+2. Issue a scored `boolean_query` of per-token `term_query` Should
+   clauses against the `tokens` field on the names index. BM25 ranks
+   docs sharing rarer / multiple input tokens higher, so the
+   `Settings.percolate_block_limit` cap returns the most relevant
+   candidates. (`term_set_query` looks similar but is constant-score,
+   so the cap would degenerate to segment-order on large corpora.)
 3. Build a one-document in-memory tantivy index of the input text
    (using the positional `default` tokenizer so phrase_query works).
 4. For each candidate name (from `names | aliases`), phrase-query the
@@ -34,24 +36,34 @@ import tantivy
 
 from juditha.model import Mention, get_common_schema
 from juditha.normalizer import tokenize, tokenize_forms
+from juditha.settings import Settings
 
-# Percolator tuning — parity with AhoExtractor's MIN_TOKEN_COUNT and the
-# 8-char total floor (4 chars × 2 tokens) imposed by MIN_PATTERN_LENGTH
-# in juditha.extraction.
-MIN_TOKEN_LENGTH = 4  # filters stopwords / noise out of the blocking set
+# Percolator tuning. `min_token_length` is in `Settings` (env
+# `JUDITHA_MIN_TOKEN_LENGTH`, default 4) because both the percolator
+# blocking filter and the AhoExtractor pattern-length floor consume it;
+# changing it requires `juditha build` since the `tokens` field is
+# populated at index time. The blocking-set cap is also in `Settings`
+# (`percolate_block_limit`, env `JUDITHA_PERCOLATE_BLOCK_LIMIT`).
 MIN_TOKEN_COUNT = 2  # single-token names too noisy to percolate
-PERCOLATE_BLOCK_LIMIT = 10_000  # cap on candidate Docs returned by the blocker
 
 
 @cache
 def _make_text_schema() -> tantivy.Schema:
     """Schema for the per-call in-memory text index.
 
-    The `default` tokenizer indexes positions, which `phrase_query`
-    requires. Cached because the schema is immutable.
+    Uses the `whitespace` tokenizer, NOT `default`: we pre-tokenize the
+    input with `juditha.normalizer.tokenize` (regex `[\\w'-]+`), which
+    preserves apostrophes and hyphens inside tokens (`"sa'adat"`,
+    `"jean-pierre"`, `"al-sisi"`). Tantivy's `default` tokenizer would
+    re-split those on punctuation, so a phrase_query like
+    `["ahmad", "sa'adat"]` would never hit; `whitespace` keeps our
+    tokens intact and only splits on space (which is where we already
+    put the boundaries).
+
+    Both tokenizers index positions, so `phrase_query` works.
     """
     b = tantivy.SchemaBuilder()
-    b.add_text_field("text", tokenizer_name="default", stored=False)
+    b.add_text_field("text", tokenizer_name="whitespace", stored=False)
     return b.build()
 
 
@@ -143,16 +155,32 @@ def percolate(
     if not text_tokens:
         return []
     text_forms = [t.form for t in text_tokens]
-    blocking_set = {f for f in text_forms if len(f) >= MIN_TOKEN_LENGTH}
+    # Read settings at call time so env-var changes apply without restart.
+    settings = Settings()
+    min_token_length = settings.min_token_length
+    blocking_set = {f for f in text_forms if len(f) >= min_token_length}
     if not blocking_set:
         return []
 
     # 2. Block: query the names tantivy index for Docs whose tokens
-    # overlap the input text. term_set_query is a single posting-list
-    # union — fast even at 10M+ docs.
-    block_q = tantivy.Query.term_set_query(schema, "tokens", sorted(blocking_set))
+    # overlap the input text. We use a `boolean_query` with `Should`
+    # clauses (one term_query per input token) rather than a
+    # `term_set_query` because the latter is a constant-score query and
+    # leaves the top-K cut as essentially segment-order. With Should
+    # clauses BM25 ranks docs that match more (and rarer) input tokens
+    # higher, so the cap returns the relevant candidates instead of
+    # whichever ones tantivy iterated first.
+    Occur = tantivy.Occur
+    Q = tantivy.Query
+    block_q = Q.boolean_query(
+        [
+            (Occur.Should, Q.term_query(schema, "tokens", t))
+            for t in sorted(blocking_set)
+        ]
+    )
+    block_limit = settings.percolate_block_limit
     searcher = index.searcher()
-    block_hits = searcher.search(block_q, PERCOLATE_BLOCK_LIMIT).hits
+    block_hits = searcher.search(block_q, block_limit).hits
     if not block_hits:
         return []
 
