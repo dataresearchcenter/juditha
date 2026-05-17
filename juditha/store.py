@@ -37,7 +37,7 @@ from rigour.names import Name, NameTypeTag, SymbolCategory, analyze_names
 from juditha.aggregator import Aggregator
 from juditha.extraction import AhoExtractor
 from juditha.model import Doc, Mention, Result
-from juditha.normalizer import name_key, tokenize
+from juditha.normalizer import name_key, tokenize_forms
 from juditha.percolator import MIN_TOKEN_LENGTH, percolate
 from juditha.settings import Settings
 
@@ -93,21 +93,31 @@ def ensure_index_path(uri: Uri) -> str:
 # ----- Index-time feature extractors (rigour 2.x) -----
 
 
-def _phonetic_codes(name: str) -> list[str]:
-    """Dedup metaphone codes per name part, for phonetic blocking."""
+@lru_cache(maxsize=100_000)
+def _phonetic_codes(name: str) -> tuple[str, ...]:
+    """Dedup metaphone codes per name part, for phonetic blocking.
+
+    Cached because the same names recur across docs/aliases and across
+    percolate calls; rigour's `Name(name).parts` parse is the cost.
+    """
     codes: set[str] = set()
     for p in Name(name).parts:
         if p.metaphone:
             codes.add(p.metaphone)
-    return sorted(codes)
+    return tuple(sorted(codes))
 
 
-def _name_features(name: str) -> tuple[list[str], list[str]]:
+@lru_cache(maxsize=100_000)
+def _name_features(name: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Run rigour analyze_names and split symbols into (qids, other_symbols).
 
     NAME-category symbols (rigour's person-name cluster IDs) go to `qids`;
     everything else (ORG_CLASS, NICK, SYMBOL, DOMAIN, LOCATION, …) goes to
     `symbols` as f"{category.name}:{symbol.id}" so categories don't collide.
+
+    Cached: rigour runs both PER and ORG analyzers on the name (two
+    Rust round-trips). With 10M-name corpora the same surface forms
+    recur often enough to make memoization worthwhile.
     """
     qids: set[str] = set()
     symbols: set[str] = set()
@@ -120,7 +130,7 @@ def _name_features(name: str) -> tuple[list[str], list[str]]:
                     # SymbolCategory is rigour's Rust enum; .value is the
                     # short label (e.g. "ORG_CLASS", "SYMBOL", "NICK").
                     symbols.add(f"{s.category.value}:{s.id}")
-    return sorted(qids), sorted(symbols)
+    return tuple(sorted(qids)), tuple(sorted(symbols))
 
 
 # ----- Query construction -----
@@ -191,8 +201,25 @@ class Store:
 
         self.buffer: list[tantivy.Document] = []
         self._extractor: AhoExtractor | None = None
+        # Lazy persistent writer: tantivy IndexWriter is heavy
+        # (heap_size × num_threads bytes); reuse across flush() calls
+        # instead of allocating one per batch.
+        self._writer: tantivy.IndexWriter | None = None
         self.index.reload()
         log.info("👋", store=self.uri)
+
+    def _get_writer(self) -> tantivy.IndexWriter:
+        if self._writer is None:
+            self._writer = self.index.writer(
+                heap_size=15_000_000 * NUM_CPU, num_threads=NUM_CPU
+            )
+        return self._writer
+
+    def _release_writer(self) -> None:
+        """Wait for in-flight merges and drop the writer reference."""
+        if self._writer is not None:
+            self._writer.wait_merging_threads()
+            self._writer = None
 
     @property
     def extractor(self) -> AhoExtractor:
@@ -216,9 +243,9 @@ class Store:
             qids.update(q_n)
             symbols.update(s_n)
             phonetic.update(_phonetic_codes(n))
-            for t in tokenize(n):
-                if len(t.form) >= MIN_TOKEN_LENGTH:
-                    tokens.add(t.form)
+            for t in tokenize_forms(n):
+                if len(t) >= MIN_TOKEN_LENGTH:
+                    tokens.add(t)
 
         fields: dict[str, str | list[str]] = {
             "key": doc.key,
@@ -238,11 +265,13 @@ class Store:
     def flush(self) -> None:
         if not self.buffer:
             return
-        writer = self.index.writer(heap_size=15_000_000 * NUM_CPU, num_threads=NUM_CPU)
+        writer = self._get_writer()
         for d in self.buffer:
             writer.add_document(d)
         writer.commit()
-        writer.wait_merging_threads()
+        # NOTE: wait_merging_threads() intentionally NOT called here —
+        # background merges can run while we accumulate the next batch.
+        # close() drains them at shutdown.
         self.index.reload()
         self.buffer = []
 
@@ -254,6 +283,9 @@ class Store:
         """
         uri = join_uri(self.uri, INDEX)
         log.info("Cleaning up outdated store ...", uri=uri)
+        # The persistent writer (if any) is tied to the about-to-be-deleted
+        # index. Drain its merges and drop it before recreating the index.
+        self._release_writer()
         rm_rf(uri)
         self.index = tantivy.Index(self._schema, ensure_index_path(self.uri))
 
@@ -272,6 +304,9 @@ class Store:
                 store.put(doc)
                 self._extractor.add_doc(j, doc)
 
+        # Drain merges from the build so the index is fully quiescent
+        # before subsequent searches.
+        self._release_writer()
         self._extractor.finalize()
         aho_path = path_from_uri(self.uri) / AHO
         self._extractor.save(aho_path)
@@ -341,17 +376,51 @@ class Store:
         """
         return percolate(self._schema, self.index, text, slop=slop)
 
+    def close(self) -> None:
+        """Flush pending writes and release tantivy writer + LevelDB handles.
+
+        Call this in one-shot scripts that want a deterministic shutdown
+        (the cached Store registry otherwise keeps refs alive until
+        process exit). Long-running workers don't need to call it
+        explicitly.
+        """
+        self.flush()
+        self._release_writer()
+        self.aggregator.close()
+
     def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:
+        # Context-manager exit flushes pending writes but does NOT close —
+        # build() uses `with self as store:` and we still want lookup /
+        # percolate to work afterwards.
         self.flush()
 
 
 @cache
-def get_store(uri: str | None = None) -> Store:
-    settings = Settings()
-    return Store(uri or settings.uri)
+def _store_for_uri(uri: str) -> Store:
+    """Cache one Store per resolved URI.
+
+    plyvel only allows one open handle per LevelDB path, so the registry
+    is effectively a per-URI singleton.
+    """
+    return Store(uri)
+
+
+def get_store(uri: Uri | None = None) -> Store:
+    """Return the cached Store for `uri` (or for the env-resolved URI).
+
+    Unlike a direct `@cache` decorator, this resolves None against the
+    current `Settings()` *at call time*, so changes to `JUDITHA_URI`
+    between calls pick up the new URI without needing `cache_clear()`.
+    """
+    return _store_for_uri(str(uri) if uri is not None else Settings().uri)
+
+
+# Backward-compat alias for code (and tests) that calls
+# `get_store.cache_clear()`. Clears the underlying per-URI registry.
+get_store.cache_clear = _store_for_uri.cache_clear  # type: ignore[attr-defined]
 
 
 @lru_cache(100_000)

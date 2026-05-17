@@ -33,7 +33,7 @@ from typing import Iterable
 import tantivy
 
 from juditha.model import Mention, get_common_schema
-from juditha.normalizer import tokenize
+from juditha.normalizer import tokenize, tokenize_forms
 
 # Percolator tuning — parity with AhoExtractor's MIN_TOKEN_COUNT and the
 # 8-char total floor (4 chars × 2 tokens) imposed by MIN_PATTERN_LENGTH
@@ -62,10 +62,14 @@ def _build_text_index(text_forms: list[str]) -> tantivy.Index:
     Pre-normalization matters: the names index stores ICU-normalized
     tokens; we feed the same normalized forms into the text index so
     phrase_query token-matching aligns on both sides.
+
+    Heap is the tantivy minimum (15 MB) but pinned to a single thread —
+    tantivy's writer defaults to one thread per CPU which would multiply
+    the heap by NUM_CPU. For a one-document index that's wasteful.
     """
     schema = _make_text_schema()
     idx = tantivy.Index(schema)
-    writer = idx.writer(heap_size=15_000_000)
+    writer = idx.writer(heap_size=15_000_000, num_threads=1)
     writer.add_document(tantivy.Document(text=" ".join(text_forms)))
     writer.commit()
     idx.reload()
@@ -169,7 +173,9 @@ def percolate(
         schema_label = get_common_schema(*schemata)
 
         for name in doc_names:
-            name_tokens = [t.form for t in tokenize(name)]
+            # tokenize_forms is cached — across percolate calls the same
+            # candidate names get tokenized only once.
+            name_tokens = list(tokenize_forms(name))
             if len(name_tokens) < MIN_TOKEN_COUNT:
                 continue
             # tantivy's phrase_query expects list[str | tuple[int, str]];

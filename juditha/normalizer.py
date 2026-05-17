@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 
 from rigour.names import (
     Name,
@@ -41,6 +42,7 @@ def icu_normalize(text: str) -> str:
     return maybe_ascii(normalized)
 
 
+@lru_cache(maxsize=100_000)
 def name_key(name: str) -> str:
     """Generate an order-independent canonical key for a name.
 
@@ -48,6 +50,10 @@ def name_key(name: str) -> str:
     comparable tokens for order independence. Returns the joined
     canonical string (e.g. "doe jane") used as both the aggregator
     cluster key and the tantivy fuzzy target.
+
+    Cached: same name strings recur heavily across aggregator clustering,
+    search rerank, and percolation setup; rigour's Name parsing is the
+    hot cost.
     """
     # Strip common prefixes (Mr., Dr., The, etc.)
     cleaned = remove_person_prefixes(name)
@@ -111,3 +117,15 @@ def tokenize(text: str) -> list[NormalizedToken]:
                 )
             )
     return tokens
+
+
+@lru_cache(maxsize=100_000)
+def tokenize_forms(name: str) -> tuple[str, ...]:
+    """Return the ICU-normalized token forms of `name` as a hashable tuple.
+
+    Cached: the same name strings recur heavily across aggregator passes,
+    percolation candidate evaluation, and AhoExtractor pattern building.
+    Use this when you only need the normalized forms (no offsets); fall
+    back to `tokenize()` when offsets matter.
+    """
+    return tuple(t.form for t in tokenize(name))
