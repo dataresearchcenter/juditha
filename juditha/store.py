@@ -1,40 +1,81 @@
+"""Tantivy-backed name lookup store.
+
+Replaces the previous sparse-matrix index. The schema uses
+`tokenizer_name="raw"` on every name field so multi-word names index as a
+single term — FuzzyTermQuery then matches against the whole normalized
+name without splitting on whitespace.
+
+Query shape (per refactor plan):
+    BooleanQuery:
+      should: fuzzy(key,     clean_q, d=2, transp=1) * 3.0
+      should: fuzzy(names,   clean_q, d=2, transp=1) * 2.0
+      should: fuzzy(aliases, clean_q, d=2, transp=1) * 1.0
+      should: bool(should=[term(phonetic, c) for c in metaphone(clean_q)]) * 0.5
+      [must: symbols ⊇ extracted_symbols]
+      [must: qid = qid_hint]
+      [must: schemata ∈ requested_schemata]
+
+Rerank: tantivy returns top-K → jaro on hit.key → rapidfuzz fallback over
+hit.names. Phonetic-only hits that are semantically wrong get filtered by
+the rerank stage.
+"""
+
 import multiprocessing
+import time
 from functools import cache, lru_cache
-from typing import Generator, Iterable, Self
+from typing import Iterable, Self
 
 import jellyfish
 import tantivy
-from anystore.decorators import error_handler
 from anystore.io import logged_items
 from anystore.logging import get_logger
 from anystore.types import Uri
-from anystore.util import join_uri, model_dump, path_from_uri, rm_rf
+from anystore.util import join_uri, path_from_uri, rm_rf
 from rapidfuzz import process
+from rigour.names import Name, NameTypeTag, SymbolCategory, analyze_names
 
 from juditha.aggregator import Aggregator
-from juditha.model import NER_TAG, Doc, Result, name_key
+from juditha.extraction import AhoExtractor
+from juditha.model import Doc, Mention, Result
+from juditha.normalizer import name_key
 from juditha.settings import Settings
-from juditha.validate import Validator
 
 NUM_CPU = multiprocessing.cpu_count()
 INDEX = "tantivy.db"
 NAMES = "names.db"
-TOKENS = "tokens"
+AHO = "automaton.txt"
 
 log = get_logger(__name__)
 settings = Settings()
 
 
+def _is_http_uri(uri: str) -> bool:
+    return uri.startswith("http://") or uri.startswith("https://")
+
+
 @cache
 def make_schema() -> tantivy.Schema:
-    schema_builder = tantivy.SchemaBuilder()
-    # Use raw tokenizer for names so they're indexed as complete strings for fuzzy matching
-    schema_builder.add_text_field("key", tokenizer_name="raw", stored=True)
-    schema_builder.add_text_field("schemata", tokenizer_name="raw", stored=True)
-    schema_builder.add_text_field("names", tokenizer_name="raw", stored=True)
-    schema_builder.add_text_field("aliases", tokenizer_name="raw", stored=True)
-    schema_builder.add_text_field("countries", tokenizer_name="raw", stored=True)
-    return schema_builder.build()
+    """Build the tantivy schema for name lookup.
+
+    Every name field uses `tokenizer_name="raw"` so multi-word names are
+    indexed as a single term — that's what makes FuzzyTermQuery work
+    across the whole name without splitting on whitespace.
+    """
+    b = tantivy.SchemaBuilder()
+    # primary normalized form — fuzzy target, BM25 anchor
+    b.add_text_field("key", tokenizer_name="raw", stored=True)
+    # surface forms (multi-value)
+    b.add_text_field("names", tokenizer_name="raw", stored=True)
+    b.add_text_field("aliases", tokenizer_name="raw", stored=True)
+    # narrowing / pushdown filters
+    b.add_text_field("schemata", tokenizer_name="raw", stored=True)
+    b.add_text_field("countries", tokenizer_name="raw", stored=True)
+    b.add_text_field("qid", tokenizer_name="raw", stored=True)
+    b.add_text_field("symbols", tokenizer_name="raw", stored=True)
+    # phonetic blocking for names unreachable by fuzzy distance 2;
+    # index-only, not stored
+    b.add_text_field("phonetic", tokenizer_name="raw", stored=False)
+    return b.build()
 
 
 def ensure_db_path(uri: Uri) -> str:
@@ -49,105 +90,185 @@ def ensure_index_path(uri: Uri) -> str:
     return str(path)
 
 
-def ensure_tokens_path(uri: Uri) -> str:
-    path = path_from_uri(uri) / TOKENS
-    path.mkdir(exist_ok=True, parents=True)
-    return str(path)
+# ----- Index-time feature extractors (rigour 2.x) -----
+
+
+def _phonetic_codes(name: str) -> list[str]:
+    """Dedup metaphone codes per name part, for phonetic blocking."""
+    codes: set[str] = set()
+    for p in Name(name).parts:
+        if p.metaphone:
+            codes.add(p.metaphone)
+    return sorted(codes)
+
+
+def _name_features(name: str) -> tuple[list[str], list[str]]:
+    """Run rigour analyze_names and split symbols into (qids, other_symbols).
+
+    NAME-category symbols (rigour's person-name cluster IDs) go to `qids`;
+    everything else (ORG_CLASS, NICK, SYMBOL, DOMAIN, LOCATION, …) goes to
+    `symbols` as f"{category.name}:{symbol.id}" so categories don't collide.
+    """
+    qids: set[str] = set()
+    symbols: set[str] = set()
+    for type_tag in (NameTypeTag.ORG, NameTypeTag.PER):
+        for n in analyze_names(type_tag, [name]):
+            for s in n.symbols:
+                if s.category == SymbolCategory.NAME:
+                    qids.add(s.id)
+                else:
+                    # SymbolCategory is rigour's Rust enum; .value is the
+                    # short label (e.g. "ORG_CLASS", "SYMBOL", "NICK").
+                    symbols.add(f"{s.category.value}:{s.id}")
+    return sorted(qids), sorted(symbols)
+
+
+# ----- Query construction -----
+
+
+def build_query(
+    schema: tantivy.Schema,
+    clean_q: str,
+    *,
+    symbols: set[str] | None = None,
+    qid_hint: str | None = None,
+    schemata: set[str] | None = None,
+    phonetic_codes: Iterable[str] | None = None,
+) -> tantivy.Query:
+    """Build the BooleanQuery per the refactor plan."""
+    Occur = tantivy.Occur
+    Q = tantivy.Query
+
+    clauses: list[tuple[tantivy.Occur, tantivy.Query]] = []
+
+    # tier 1: fuzzy across name fields with juditha's boost scheme
+    for field, boost in (("key", 3.0), ("names", 2.0), ("aliases", 1.0)):
+        fq = Q.fuzzy_term_query(
+            schema,
+            field,
+            clean_q,
+            distance=2,
+            transposition_cost_one=True,
+            prefix=False,
+        )
+        clauses.append((Occur.Should, Q.boost_query(fq, boost)))
+
+    # tier 2: phonetic blocking — OR across tokens at lower boost
+    codes = [c for c in (phonetic_codes or []) if c]
+    if codes:
+        phon = Q.boolean_query(
+            [(Occur.Should, Q.term_query(schema, "phonetic", c)) for c in codes]
+        )
+        clauses.append((Occur.Should, Q.boost_query(phon, 0.5)))
+
+    # narrowing (hard filters via posting-list intersection)
+    if symbols:
+        sym = Q.boolean_query(
+            [(Occur.Should, Q.term_query(schema, "symbols", s)) for s in symbols]
+        )
+        clauses.append((Occur.Must, sym))
+
+    if qid_hint:
+        clauses.append((Occur.Must, Q.term_query(schema, "qid", qid_hint)))
+
+    if schemata:
+        sch = Q.boolean_query(
+            [(Occur.Should, Q.term_query(schema, "schemata", s)) for s in schemata]
+        )
+        clauses.append((Occur.Must, sch))
+
+    return Q.boolean_query(clauses)
 
 
 class Store:
     def __init__(self, uri: str | None):
-        schema = make_schema()
-
         self.uri = uri or settings.uri
-
-        if self.uri.startswith("memory"):
-            self.index = tantivy.Index(schema)
-            self.aggregator = Aggregator(":memory:")
-            self.validator = Validator("memory://", self.aggregator)
-        else:
-            self.index = tantivy.Index(schema, ensure_index_path(self.uri))
-            self.aggregator = Aggregator(ensure_db_path(self.uri))
-            self.validator = Validator(ensure_tokens_path(self.uri), self.aggregator)
+        self._schema = make_schema()
+        # Tantivy mmap on disk so the OS page cache is shared across all
+        # procrastinate workers on the host (memory footprint is 1×, not N×).
+        self.index = tantivy.Index(self._schema, ensure_index_path(self.uri))
+        self.aggregator = Aggregator(ensure_db_path(self.uri))
 
         self.buffer: list[tantivy.Document] = []
-
+        self._extractor: AhoExtractor | None = None
         self.index.reload()
         log.info("👋", store=self.uri)
 
+    @property
+    def extractor(self) -> AhoExtractor:
+        if self._extractor is None:
+            self._extractor = AhoExtractor()
+            aho_path = path_from_uri(self.uri) / AHO
+            self._extractor.load(aho_path)
+        return self._extractor
+
     def put(self, doc: Doc) -> None:
-        self.buffer.append(tantivy.Document(**model_dump(doc)))
-        if len(self.buffer) == 100_000:
+        """Buffer a Doc for tantivy indexing; flushes every 100k."""
+        names_all = doc.names | doc.aliases
+        qids: set[str] = set()
+        symbols: set[str] = set()
+        phonetic: set[str] = set()
+        for n in names_all:
+            q_n, s_n = _name_features(n)
+            qids.update(q_n)
+            symbols.update(s_n)
+            phonetic.update(_phonetic_codes(n))
+
+        fields: dict[str, str | list[str]] = {
+            "key": doc.key,
+            "names": sorted(doc.names),
+            "aliases": sorted(doc.aliases),
+            "schemata": sorted(doc.schemata),
+            "countries": sorted(doc.countries),
+            "qid": sorted(qids),
+            "symbols": sorted(symbols),
+            "phonetic": sorted(phonetic),
+        }
+        self.buffer.append(tantivy.Document(**fields))
+        if len(self.buffer) >= 100_000:
             self.flush()
 
-    def build(self) -> None:
-        if not self.uri.startswith("memory"):
-            uri = join_uri(self.uri, INDEX)
-            log.info("Cleaning up outdated store ...", uri=uri)
-            rm_rf(uri)
-            self.index = tantivy.Index(make_schema(), ensure_index_path(self.uri))
-        with self as store:
-            count = self.aggregator.count
-            for doc in logged_items(
-                self.aggregator, "Indexing", item_name="Doc", logger=log, total=count
-            ):
-                store.put(doc)
-        # build validation tokens
-        _ = self.validator.get_tokens()
-
     def flush(self) -> None:
-        writer = self.index.writer(heap_size=15000000 * NUM_CPU, num_threads=NUM_CPU)
-        for doc in self.buffer:
-            writer.add_document(doc)
+        if not self.buffer:
+            return
+        writer = self.index.writer(heap_size=15_000_000 * NUM_CPU, num_threads=NUM_CPU)
+        for d in self.buffer:
+            writer.add_document(d)
         writer.commit()
         writer.wait_merging_threads()
         self.index.reload()
         self.buffer = []
 
-    def _search(
-        self,
-        q: str,
-        clean_q: str,
-        query: tantivy.Query,
-        limit: int,
-        threshold: float,
-        schemata: Iterable[str] | None = None,
-    ) -> Generator[Result, None, None]:
-        searcher = self.index.searcher()
-        result = searcher.search(query, limit)
-        docs: list[Doc] = []
-        for item in result.hits:
-            tdoc = searcher.doc(item[1])
-            data = tdoc.to_dict()
+    def build(self) -> None:
+        """Rebuild tantivy index + AhoExtractor from the aggregator.
 
-            # Convert lists to sets and handle fields properly
-            doc = Doc(
-                key=tdoc.get_first("key") or "",
-                names=set(data.get("names", [])),
-                aliases=set(data.get("aliases", [])),
-                countries=set(data.get("countries", [])),
-                schemata=set(data.get("schemata", [])),
-            )
+        Single iteration through the aggregator — both consumers see each
+        doc as it streams through.
+        """
+        uri = join_uri(self.uri, INDEX)
+        log.info("Cleaning up outdated store ...", uri=uri)
+        rm_rf(uri)
+        self.index = tantivy.Index(self._schema, ensure_index_path(self.uri))
 
-            # Schema filtering: skip docs that don't match requested schemata
-            if schemata and not doc.schemata.intersection(schemata):
-                continue
+        self._extractor = AhoExtractor()
+        count = self.aggregator.count
+        with self as store:
+            for j, doc in enumerate(
+                logged_items(
+                    self.aggregator,
+                    "Indexing",
+                    item_name="Doc",
+                    logger=log,
+                    total=count,
+                )
+            ):
+                store.put(doc)
+                self._extractor.add_doc(j, doc)
 
-            # Compare normalized forms for scoring
-            score = jellyfish.jaro_similarity(clean_q, doc.key)
-            if score > threshold:
-                yield Result.from_doc(doc, q, score)
-            else:
-                docs.append(doc)
-        # now try other names
-        for doc in docs:
-            res = process.extractOne(clean_q, [name_key(n) for n in doc.names])
-            if res is not None:
-                score = res[:2][1] / 100
-                if score > threshold:
-                    yield Result.from_doc(doc, q, score)
+        self._extractor.finalize()
+        aho_path = path_from_uri(self.uri) / AHO
+        self._extractor.save(aho_path)
 
-    @error_handler(max_retries=0)
     def search(
         self,
         q: str,
@@ -155,39 +276,55 @@ class Store:
         limit: int | None = None,
         schemata: Iterable[str] | None = None,
     ) -> Result | None:
+        t0 = time.perf_counter()
         threshold = threshold if threshold is not None else settings.fuzzy_threshold
         limit = limit if limit is not None else settings.limit
         clean_q = name_key(q)
         if not clean_q or len(clean_q) < settings.min_length:
-            return
+            return None
 
-        # Build fuzzy query for the complete name with field boosting
-        # key field boosted 3x, names 2x, aliases 1x
-        field_boosts = {"key": 3.0, "names": 2.0, "aliases": 1.0}
+        schemata_set = set(schemata) if schemata else None
+        phon_codes = _phonetic_codes(q)
+        query = build_query(
+            self._schema,
+            clean_q,
+            schemata=schemata_set,
+            phonetic_codes=phon_codes,
+        )
 
-        # Create fuzzy query for each field matching the complete name
-        field_queries = []
-        for field, boost in field_boosts.items():
-            fuzzy_q = tantivy.Query.fuzzy_term_query(
-                self.index.schema,
-                field,
-                clean_q,
-                distance=2,
-                transposition_cost_one=True,
-                prefix=False,
+        searcher = self.index.searcher()
+        hits = searcher.search(query, limit).hits
+
+        deferred: list[Doc] = []
+        for _, addr in hits:
+            tdoc = searcher.doc(addr)
+            data = tdoc.to_dict()
+            doc = Doc(
+                key=tdoc.get_first("key") or "",
+                names=set(data.get("names", [])),
+                aliases=set(data.get("aliases", [])),
+                countries=set(data.get("countries", [])),
+                schemata=set(data.get("schemata", [])),
             )
-            # Boost the field query
-            boosted_q = tantivy.Query.boost_query(fuzzy_q, boost)
-            field_queries.append((tantivy.Occur.Should, boosted_q))
+            score = jellyfish.jaro_similarity(clean_q, doc.key)
+            if score > threshold:
+                took = (time.perf_counter() - t0) * 1000
+                return Result.from_doc(doc, q, score, took=took)
+            deferred.append(doc)
 
-        # Combine all field queries with OR - Tantivy's BM25 will rank by relevance
-        query = tantivy.Query.boolean_query(field_queries)
+        # Second pass: rapidfuzz over each hit's full surface-form set, to
+        # catch alias-driven matches that don't rank on `key`.
+        for doc in deferred:
+            res = process.extractOne(clean_q, [name_key(n) for n in doc.names])
+            if res is not None:
+                score = res[1] / 100
+                if score > threshold:
+                    took = (time.perf_counter() - t0) * 1000
+                    return Result.from_doc(doc, q, score, took=took)
+        return None
 
-        for res in self._search(q, clean_q, query, limit, threshold, schemata):
-            return res
-
-    def validate(self, name: str, tag: NER_TAG) -> bool:
-        return self.validator.validate_name(name, tag)
+    def extract(self, text: str) -> list[Mention]:
+        return self.extractor.extract(text)
 
     def __enter__(self) -> Self:
         return self
@@ -196,10 +333,64 @@ class Store:
         self.flush()
 
 
+class RemoteStore:
+    """HTTP client that delegates lookup/extract to a running Juditha API."""
+
+    def __init__(self, base_url: str):
+        import httpx
+
+        self.base_url = base_url.rstrip("/")
+        self._client = httpx.Client(base_url=self.base_url, timeout=30)
+        log.info("👋 (remote)", store=self.base_url)
+
+    def search(
+        self,
+        q: str,
+        threshold: float | None = None,
+        limit: int | None = None,
+        schemata: Iterable[str] | None = None,
+    ) -> Result | None:
+        params: dict[str, float | list[str]] = {}
+        if threshold is not None:
+            params["threshold"] = threshold
+        if schemata is not None:
+            params["schemata"] = list(schemata)
+        resp = self._client.get(f"/lookup/{q}", params=params)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return Result(**resp.json())
+
+    def extract(self, text: str) -> list[Mention]:
+        resp = self._client.post("/extract", json={"text": text})
+        resp.raise_for_status()
+        return [Mention(**m) for m in resp.json()]
+
+    @property
+    def aggregator(self) -> None:
+        raise NotImplementedError("RemoteStore does not support aggregator access")
+
+    @property
+    def extractor(self) -> None:
+        raise NotImplementedError("RemoteStore does not support extractor access")
+
+    def build(self) -> None:
+        raise NotImplementedError("RemoteStore does not support build")
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        self._client.close()
+
+
 @cache
-def get_store(uri: str | None = None) -> Store:
+def get_store(uri: str | None = None) -> Store | RemoteStore:
     settings = Settings()
-    return Store(uri or settings.uri)
+    uri = uri or settings.uri
+    if _is_http_uri(uri):
+        return RemoteStore(uri)
+    return Store(uri)
 
 
 @lru_cache(100_000)
@@ -211,9 +402,3 @@ def lookup(
 ) -> Result | None:
     store = get_store(uri) if uri is not None else get_store()
     return store.search(q, threshold, schemata=set(schemata) if schemata else None)
-
-
-@lru_cache(100_000)
-def validate_name(name: str, tag: NER_TAG, uri: Uri | None = None) -> bool:
-    store = get_store(uri) if uri is not None else get_store()
-    return store.validate(name, tag)

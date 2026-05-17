@@ -1,27 +1,11 @@
 import itertools
 from functools import cache
-from typing import Generator, Literal, Self, TypeAlias
+from typing import Generator, Self, TypeAlias
 
 from followthemoney import model
 from followthemoney.exc import InvalidData
-from pydantic import BaseModel, computed_field
-from rigour.names import (
-    Name,
-    pick_name,
-    remove_obj_prefixes,
-    remove_org_prefixes,
-    remove_person_prefixes,
-)
-
-NER_TAG: TypeAlias = Literal["PER", "ORG", "LOC", "OTHER"]
-SCHEMA_NER: dict[str, NER_TAG] = {
-    "LegalEntity": "OTHER",
-    "PublicBody": "ORG",
-    "Company": "ORG",
-    "Organization": "ORG",
-    "Person": "PER",
-    "Address": "LOC",
-}
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+from rigour.names import pick_name
 
 
 @cache
@@ -41,18 +25,6 @@ def get_common_schema(*schemata: str) -> str:
     return "LegalEntity"
 
 
-def name_key(name: str) -> str:
-    key = Name(name).norm_form
-    key = remove_obj_prefixes(key)
-    key = remove_org_prefixes(key)
-    key = remove_person_prefixes(key)
-    return key
-
-
-def schema_to_ner(schema: str) -> NER_TAG:
-    return SCHEMA_NER.get(schema, "OTHER")
-
-
 class Doc(BaseModel):
     key: str
     names: set[str] = set()
@@ -61,21 +33,22 @@ class Doc(BaseModel):
     schemata: set[str] = set()
     score: float = 0
 
-    @computed_field
-    @property
-    def ner_tags(self) -> set[NER_TAG]:
-        return {schema_to_ner(s) for s in self.schemata}
-
 
 Docs: TypeAlias = Generator[Doc, None, None]
 
 
 class Result(Doc):
     query: str
+    took: float = 0  # milliseconds
 
     @classmethod
-    def from_doc(cls, doc: Doc, q: str, score: float) -> Self:
-        return cls(query=q, score=score, **doc.model_dump(exclude={"score"}))
+    def from_doc(cls, doc: Doc, q: str, score: float, took: float = 0) -> Self:
+        return cls(
+            query=q,
+            score=score,
+            took=took,
+            **doc.model_dump(exclude={"score"}),
+        )
 
     @computed_field
     @property
@@ -88,12 +61,16 @@ class Result(Doc):
         return pick_name(list(self.names))
 
 
-class SchemaPrediction(BaseModel):
-    name: str
-    label: str
-    score: float
+class Mention(BaseModel):
+    # `schema` shadows BaseModel.schema; expose it via alias so the JSON
+    # surface stays "schema" while the Python attribute is `schema_`.
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_by_alias=True,
+        serialize_by_alias=True,
+    )
 
-    @computed_field
-    @property
-    def ner_tag(self) -> NER_TAG:
-        return schema_to_ner(self.label)
+    text: str
+    start: int
+    end: int
+    schema_: str = Field(alias="schema")
