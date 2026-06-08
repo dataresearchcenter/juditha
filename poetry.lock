@@ -977,13 +977,14 @@ pyflakes = ">=3.4.0,<3.5.0"
 
 [[package]]
 name = "followthemoney"
-version = "4.8.2"
+version = "4.9.0"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "followthemoney-4.8.2-py3-none-any.whl", hash = "sha256:d6e9c20032290697f1c9a5c32087294896524069379d74184561a3c1d55e77d2"},
+    {file = "followthemoney-4.9.0-py3-none-any.whl", hash = "sha256:643ad0c8499bbb4aecc1c219d7fa9d62de568ecbb622a64791d14d01f62ba18e"},
+    {file = "followthemoney-4.9.0.tar.gz", hash = "sha256:4364f98b8522f2273acca651b305ef3d8885a48ee6ddbc88f07736d04542808e"},
 ]
 
 [package.dependencies]
@@ -4661,4 +4662,4 @@ tomli = ">=2.4.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "d4a3a0b93866d908c2be62a0cc5e711ce4290900b983cca69b9573f97f82732f"
+content-hash = "55f9e9f13480886787bc5babe839eb9b5572a05ef194c9dadc9ce60fda278850"
