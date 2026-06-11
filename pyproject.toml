@@ -38,7 +38,7 @@ pytest = "^9.0.2"
 pytest-coverage = "^0.0"
 pytest-env = "^1.0.1"
 mypy = "^1.16.1"
-zensical = "^0.0.42"
+zensical = "^0.0.45"
 
 [build-system]
 requires = ["poetry-core"]
