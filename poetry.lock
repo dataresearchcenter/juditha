@@ -276,14 +276,14 @@ files = [
 
 [[package]]
 name = "anystore"
-version = "1.2.0"
+version = "1.2.1"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-1.2.0-py3-none-any.whl", hash = "sha256:80776336c85f7f8132ab8ce15e1a093b5e5a7deba742a3a787bf4e0b77b72338"},
-    {file = "anystore-1.2.0.tar.gz", hash = "sha256:67d08b383714a833c076f24d9aba84470ab814a3b84e432263e370c0a587ce24"},
+    {file = "anystore-1.2.1-py3-none-any.whl", hash = "sha256:02c3b080ce06f7d14722fd6c06a0d82bf0bf3800a0603d990a89ae2f507df6fb"},
+    {file = "anystore-1.2.1.tar.gz", hash = "sha256:54eeca2977056d98a811dd16f3a2abcd4c7ead617d3175be35ba61d2eb5004fb"},
 ]
 
 [package.dependencies]
@@ -300,14 +300,14 @@ rich = ">=10.0.0,<16.0.0"
 rigour = ">=2.1.1,<3.0.0"
 s3fs = ">2023.10,<2027"
 structlog = ">=22.0.0,<26.0.0"
-tqdm = ">=4.67.1,<5.0.0"
+tqdm = ">=4.68.1,<5.0.0"
 typer = ">=0.25.1"
 uuid7 = ">=0.1.0,<0.2.0"
 
 [package.extras]
-api = ["fastapi (>=0.136.1,<1.0.0)", "uvicorn (>=0.46.0,<1.0.0)"]
-redis = ["fakeredis (>=2.26.2,<3.0.0)", "redis (>=4.0.0)"]
-sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
+api = ["fastapi (>=0.136.3,<1.0.0)", "uvicorn (>=0.48.0,<1.0.0)"]
+redis = ["fakeredis (>=2.36.1,<3.0.0)", "redis (>=4.0.0)"]
+sql = ["sqlalchemy (>=2.0.50,<3.0.0)"]
 
 [[package]]
 name = "attrs"
@@ -4210,14 +4210,14 @@ files = [
 
 [[package]]
 name = "tqdm"
-version = "4.67.3"
+version = "4.68.2"
 description = "Fast, Extensible Progress Meter"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "tqdm-4.67.3-py3-none-any.whl", hash = "sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf"},
-    {file = "tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb"},
+    {file = "tqdm-4.68.2-py3-none-any.whl", hash = "sha256:d4240441fb5353290b87d6a85968c9decc131a99b8c7faa28269d829de669ede"},
+    {file = "tqdm-4.68.2.tar.gz", hash = "sha256:89c230e8dbc67c7615c142487111222f878c77427ea09549960f62389e258add"},
 ]
 
 [package.dependencies]
@@ -4225,10 +4225,10 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [package.extras]
 dev = ["nbval", "pytest (>=6)", "pytest-asyncio (>=0.24)", "pytest-cov", "pytest-timeout"]
-discord = ["requests"]
+discord = ["envwrap", "requests"]
 notebook = ["ipywidgets (>=6)"]
-slack = ["slack-sdk"]
-telegram = ["requests"]
+slack = ["envwrap", "slack-sdk"]
+telegram = ["envwrap", "requests"]
 
 [[package]]
 name = "typer"
@@ -4662,4 +4662,4 @@ tomli = ">=2.4.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "4a79bd167ad8e5618d1d95bf73db081a940d71ed4662c22189fdc6d8206b32e4"
+content-hash = "23cbc1faf76731fd7c34b56a6d394e897d3b32c8b04c95edf29b169fcfa4c1f7"
