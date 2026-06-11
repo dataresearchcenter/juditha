@@ -15,9 +15,17 @@ A super-fast in-process lookup service for canonical names, backed by [tantivy](
 
 The implementation uses a pre-populated names database and index. Data is either [FollowTheMoney](https://followthemoney.tech) entities or simply list of names.
 
-## Documentation
+## What you can do with it
 
-https://docs.investigraph.dev/lib/juditha
+- Validate and canonicalise NER spans against a known-name corpus ([Quickstart](quickstart.md), [Usage](usage/python.md)).
+- Load names from a flat list, [FollowTheMoney](https://followthemoney.tech) entities, or a [nomenklatura](https://github.com/opensanctions/nomenklatura) dataset / catalog ([Load data](load-data/names.md)).
+- Extract every known-name mention from a fulltext document, either via an [Aho-Corasick automaton](extras/extract.md) or via [percolation](extras/percolate.md) (reverse search of the names index).
+
+## Where to go next
+
+- Start with the [Quickstart](quickstart.md).
+- [Usage / CLI](usage/cli.md) and the full [CLI reference](cli-reference.md).
+- [Usage / Python](usage/python.md).
 
 ## The name
 

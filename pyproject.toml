@@ -1,6 +1,6 @@
 [project]
 name = "juditha"
-version = "4.3.0"
+version = "4.4.0"
 description = "A super-fast canonical name lookup service"
 authors = [{ name = "Simon Wörpel", email = "simon.woerpel@pm.me" }]
 license = "AGPLv3+"
@@ -15,29 +15,30 @@ classifiers = [
 ]
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "anystore (>=1.1.4,<2.0.0)",
-    "followthemoney (>=4.6.0,<5.0.0)",
-    "ftmq[level] (>=4.6.0,<5.0.0)",
-    "tantivy (>=0.25.1,<0.26.0)",
+    "anystore (>=1.2.1,<2.0.0)",
+    "followthemoney (>=4.9.1,<5.0.0)",
+    "ftmq[level] (>=4.8.2,<5.0.0)",
+    "rigour (>=2.1.2,<3.0.0)",
+    "rapidfuzz (>=3.9.0,<4.0.0)",
     "jellyfish (>=1.2.1,<2.0.0)",
-    "fasttext-numpy2 (>=0.10.4,<0.11.0)",
+    "ahocorasick-rs (>=1.0.3,<2.0.0)",
+    "tantivy (>=0.25.1,<0.26.0)",
 ]
 
 [project.scripts]
 juditha = "juditha.cli:cli"
 
 [tool.poetry.group.dev.dependencies]
-black = "^26.1.0"
-isort = "^7.0.0"
+black = "^26.5.1"
+isort = "^8.0.1"
 flake8 = "^7.3.0"
 pre-commit = "^4.2.0"
 bump2version = "^1.0.1"
 pytest = "^9.0.3"
 pytest-coverage = "^0.0"
 pytest-env = "^1.0.1"
-httpx = ">=0.25.0"
-mypy = "^1.16.1"
-uvicorn = "^0.40.0"
+mypy = "^2.1.0"
+zensical = "^0.0.45"
 
 [build-system]
 requires = ["poetry-core"]
@@ -45,4 +46,3 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest_env]
 DEBUG = 1
-JUDITHA_URI = "memory://"
