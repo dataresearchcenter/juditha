@@ -18,7 +18,7 @@ dependencies = [
     "anystore (>=1.2.1,<2.0.0)",
     "followthemoney (>=4.9.1,<5.0.0)",
     "ftmq[level] (>=4.8.2,<5.0.0)",
-    "rigour (>=2.1.1,<3.0.0)",
+    "rigour (>=2.1.2,<3.0.0)",
     "rapidfuzz (>=3.9.0,<4.0.0)",
     "jellyfish (>=1.2.1,<2.0.0)",
     "ahocorasick-rs (>=1.0.3,<2.0.0)",
@@ -29,7 +29,7 @@ dependencies = [
 juditha = "juditha.cli:cli"
 
 [tool.poetry.group.dev.dependencies]
-black = "^26.1.0"
+black = "^26.5.1"
 isort = "^8.0.1"
 flake8 = "^7.3.0"
 pre-commit = "^4.2.0"
