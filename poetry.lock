@@ -4705,4 +4705,4 @@ tomli = ">=2.4.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "ee3d3c44b7b222695e7d974ddb507dad8966a6fb59017eb4787273e5d9927a78"
+content-hash = "da54b24270b0c728b43bcdcebc688d18da40810baa5549cdc1bbb7f0a63a3a30"
