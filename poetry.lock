@@ -70,14 +70,14 @@ files = [
 
 [[package]]
 name = "anystore"
-version = "1.2.4"
+version = "1.2.5"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-1.2.4-py3-none-any.whl", hash = "sha256:004a006322b1e96a62479fd58c919d528965feb1655b40ebd2b5f21f68fe7078"},
-    {file = "anystore-1.2.4.tar.gz", hash = "sha256:f4bbede8277aea3e2bbd407bcadd0d2a14ccffe5fec6b5c939a3e4a9fe40dd42"},
+    {file = "anystore-1.2.5-py3-none-any.whl", hash = "sha256:6465c3f4a7316bbc8fdc74de09fe25fdb9e24be5abfe3851e2c4b5c2e9af5bc8"},
+    {file = "anystore-1.2.5.tar.gz", hash = "sha256:68e549edc43b55d714ff4f88213888a5d03e3943f066ed3eb93ead1765ad211e"},
 ]
 
 [package.dependencies]
@@ -87,18 +87,18 @@ dateparser = ">=1.2.2,<2.0.0"
 fsspec = ">2023.10,<2027"
 imohash = ">=1.1.0,<2.0.0"
 orjson = ">=3.11.9,<4.0.0"
-pyaml = ">=26.2.1,<27.0.0"
+pyaml = ">=26.7.0,<27.0.0"
 pydantic = ">=2.13.4,<3.0.0"
 pydantic-settings = ">=2.7.1,<3.0.0"
 rich = ">=10.0.0,<16.0.0"
 rigour = ">=2.1.1,<3.0.0"
 structlog = ">=22.0.0"
-tqdm = ">=4.68.1,<5.0.0"
+tqdm = ">=4.68.4,<5.0.0"
 typer = ">=0.25.1"
 uuid7 = ">=0.1.0,<0.2.0"
 
 [package.extras]
-api = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "fastapi (>=0.136.3,<1.0.0)", "uvicorn (>=0.48.0,<1.0.0)"]
+api = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "fastapi (>=0.136.3,<1.0.0)", "uvicorn (>=0.51.0,<1.0.0)"]
 http = ["fsspec[http] (>2023.10,<2027)"]
 redis = ["fakeredis (>=2.36.2,<3.0.0)", "redis (>=4.0.0)"]
 s3 = ["s3fs (>2023.10,<2027)"]
@@ -859,22 +859,22 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.9.2"
+version = "4.10.0"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = "<3.14,>=3.11"
+python-versions = "<3.15,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.9.2-py3-none-any.whl", hash = "sha256:f71c6e73908cfa741ff227ca45d1207290c6a6320309bbaef942c4c798234b4a"},
-    {file = "ftmq-4.9.2.tar.gz", hash = "sha256:48c25fdfb114db8e84a2b7aeccebcb5a6fd56329f82b83d84d808a743af0aa3a"},
+    {file = "ftmq-4.10.0-py3-none-any.whl", hash = "sha256:abbd1ff0f816bf0fc65815161e7d87b58fa03711d4adfe30c6ebaf3c5279dea4"},
+    {file = "ftmq-4.10.0.tar.gz", hash = "sha256:346e66035608a1b341b32402ef442f3e75641c2a14afc750cfeecb33d2ec141c"},
 ]
 
 [package.dependencies]
-anystore = ">=1.2.2,<2.0.0"
+anystore = ">=1.2.5,<2.0.0"
 click = ">=8.4.2,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
-followthemoney = ">=4.9.2,<5.0.0"
-nomenklatura = ">=4.10.0,<5.0.0"
+followthemoney = ">=4.10.0,<5.0.0"
+nomenklatura = ">=4.11.4,<5.0.0"
 normality = ">=3.1.0,<4.0.0"
 orjson = ">=3.10.18,<4.0.0"
 plyvel = {version = ">=1.5.1,<2.0.0", optional = true, markers = "extra == \"level\""}
@@ -883,7 +883,7 @@ rigour = ">=2.1.2,<3.0.0"
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
-lake = ["deltalake (>=1.6.1,<2.0.0)", "duckdb (>=1.5.4,<2.0.0)", "pyarrow (>=24.0.0,<25.0.0)"]
+lake = ["deltalake (>=1.6.2,<2.0.0)", "duckdb (>=1.5.4,<2.0.0)", "pandas (>=3.0.3,<4.0.0)", "pyarrow (>=24.0.0,<25.0.0)"]
 level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.51,<3.0.0)"]
 redis = ["fakeredis (>=2.36.2,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
@@ -2236,14 +2236,14 @@ dev = ["build", "bump2version", "mypy", "pytest", "pytest-cov", "wheel"]
 
 [[package]]
 name = "pyaml"
-version = "26.2.1"
+version = "26.7.0"
 description = "PyYAML-based module to produce a bit more pretty and readable YAML-serialized data"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "pyaml-26.2.1-py3-none-any.whl", hash = "sha256:6261c2f0a2f33245286c794ad6ec234be33a73d2b05427079fd343e2812a87cf"},
-    {file = "pyaml-26.2.1.tar.gz", hash = "sha256:489dd82997235d4cfcf76a6287fce2f075487d77a6567c271e8d790583690c68"},
+    {file = "pyaml-26.7.0-py3-none-any.whl", hash = "sha256:cfa382780c43ae660669b87d394d550a41856ef175f5749f51f753e12d7077ac"},
+    {file = "pyaml-26.7.0.tar.gz", hash = "sha256:11cda3a796efc6dbce0d56836be56cfd26289dad07bcd78e9904086729929c93"},
 ]
 
 [package.dependencies]
@@ -3593,21 +3593,20 @@ files = [
 
 [[package]]
 name = "tqdm"
-version = "4.68.2"
+version = "4.68.4"
 description = "Fast, Extensible Progress Meter"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "tqdm-4.68.2-py3-none-any.whl", hash = "sha256:d4240441fb5353290b87d6a85968c9decc131a99b8c7faa28269d829de669ede"},
-    {file = "tqdm-4.68.2.tar.gz", hash = "sha256:89c230e8dbc67c7615c142487111222f878c77427ea09549960f62389e258add"},
+    {file = "tqdm-4.68.4-py3-none-any.whl", hash = "sha256:5168118b2368f48c561afda8020fd79195b1bdb0bdf8086b88442c267a315dc2"},
+    {file = "tqdm-4.68.4.tar.gz", hash = "sha256:19829c9673638f2a0b8617da4cdcb927e831cd88bcfcb6e78d42a4d1af131520"},
 ]
 
 [package.dependencies]
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [package.extras]
-dev = ["nbval", "pytest (>=6)", "pytest-asyncio (>=0.24)", "pytest-cov", "pytest-timeout"]
 discord = ["envwrap", "requests"]
 notebook = ["ipywidgets (>=6)"]
 slack = ["envwrap", "slack-sdk"]
@@ -3798,5 +3797,5 @@ tomli = ">=2.4.0"
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<3.14"
-content-hash = "b31fe732e75c938d007990b5152e1e11365cb7430b15446244eece70ea2fd2eb"
+python-versions = ">=3.11,<3.15"
+content-hash = "39f63f632ea7ed0a89243b9e513194487f913bbec058b24718bd49f1ac24cf2b"
