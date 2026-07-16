@@ -38,7 +38,7 @@ from juditha.aggregator import Aggregator
 from juditha.extraction import AhoExtractor
 from juditha.model import Doc, Mention, Result
 from juditha.normalizer import name_key, tokenize_forms
-from juditha.percolator import percolate
+from juditha.percolator import MIN_TOKEN_CHARS, percolate
 from juditha.settings import Settings
 
 NUM_CPU = multiprocessing.cpu_count()
@@ -235,11 +235,13 @@ class Store:
         qids: set[str] = set()
         symbols: set[str] = set()
         phonetic: set[str] = set()
-        # tokens powers the percolator blocker: every normalized token of
-        # at least `settings.min_token_length` chars across names +
-        # aliases. Same threshold the percolator's query-time blocking
-        # set uses (in juditha.percolator).
-        min_token_length = settings.min_token_length
+        # tokens powers the percolator blocker: every normalized token
+        # of every name / alias with `len >= MIN_TOKEN_CHARS` (hardcoded
+        # at 2 in juditha.percolator). Symmetric with the percolator's
+        # query-time `blocking_set` filter. The
+        # `minimum_number_should_match` cut at query time
+        # (`Settings.percolate_min_should_match`) does the rest of the
+        # noise reduction.
         tokens: set[str] = set()
         for n in names_all:
             q_n, s_n = _name_features(n)
@@ -247,7 +249,7 @@ class Store:
             symbols.update(s_n)
             phonetic.update(_phonetic_codes(n))
             for t in tokenize_forms(n):
-                if len(t) >= min_token_length:
+                if len(t) >= MIN_TOKEN_CHARS:
                     tokens.add(t)
 
         fields: dict[str, str | list[str]] = {

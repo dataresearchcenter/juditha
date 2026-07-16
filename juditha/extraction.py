@@ -206,8 +206,15 @@ class AhoExtractor:
                 continue
             seen.add(span_key)
 
-            # original surface in text of this match
-            surface = text[orig_start:orig_end]
+            # Surface: join the original-case forms of just the matched
+            # tokens with single spaces, rather than slicing the raw
+            # original text. The slice picks up whatever punctuation the
+            # tokenizer stripped between tokens (e.g. `text[i:j]` for a
+            # matched ["men", "so"] over `'men". So'` returns the noisy
+            # `'men". So'`). Joining `t.original` reflects what was
+            # actually matched. `start` / `end` still cover the
+            # inclusive byte span for callers that need the raw slice.
+            surface = " ".join(t.original for t in tokens[start_tok : end_tok + 1])
 
             mentions.append(
                 Mention(

@@ -61,18 +61,12 @@ Minimum length of the normalized query. Queries that normalize to fewer than thi
 | Field | `min_token_length` |
 | Type | `int` |
 | Default | `4` |
-| Read at | **build time** (`Store.build`, `AhoExtractor.add_doc`) and query time (percolator blocking) |
+| Read at | **build time** (`AhoExtractor.add_doc`) |
 | Rebuild needed | **yes** (`juditha build`) |
 
-Per-token length floor shared by:
+Per-token length floor for the Aho-Corasick extractor's pattern-length filter, derived as `min_token_length × MIN_TOKEN_COUNT` (default `4 × 2 = 8` total normalized chars). Lower this to admit shorter patterns into the automaton (e.g. `"Le Pen"`, `"Al Qamar"`). Cost: more spurious mentions from very short patterns.
 
-- The percolator's blocking set (`{f for f in text_forms if len(f) >= min_token_length}`)
-- The `tokens` field on the names index (populated at index time with the same floor)
-- The Aho-Corasick extractor's pattern-length filter, derived as `min_token_length × MIN_TOKEN_COUNT` (default `4 × 2 = 8` total normalized chars)
-
-Lower this to admit shorter, stopword-ish tokens. Short-token names like `Abu Bakr` or `XI Jinping` then carry richer blocking signatures and survive the BM25 `percolate_block_limit` cap on large corpora. Cost: index size grows and the blocking-set fan-out increases at query time.
-
-Index-time and query-time use of this setting are coupled: the percolator's blocking set at query time MUST match the floor used when populating the `tokens` field at index time, otherwise blocking misses real candidates. Always run `juditha build` after changing this.
+The percolator does NOT consult this setting: it uses the hardcoded `MIN_TOKEN_CHARS = 2` floor in `juditha.percolator` symmetrically at index time (the `tokens` field) and query time (the `blocking_set`). Noise above 2 chars is filtered at query time by [`percolate_min_should_match`](#juditha_percolate_min_should_match) instead.
 
 ## Query-time tuning
 
@@ -86,7 +80,7 @@ Index-time and query-time use of this setting are coupled: the percolator's bloc
 | Read at | every `Store.percolate` / `percolate()` call |
 | Rebuild needed | no |
 
-Maximum number of candidate `Doc`s the percolator's blocking stage returns. Candidates are BM25-ranked by how many (and how rare) of the input text's tokens they match. Tantivy 0.25 does not expose a `minimum_should_match` knob, so the only way to ensure low-frequency candidates aren't crowded out at multi-million-cluster scale is to raise this cap.
+Maximum number of candidate `Doc`s the percolator's blocking stage returns. Candidates are BM25-ranked by how many (and how rare) of the input text's tokens they match. See also [`JUDITHA_PERCOLATE_MIN_SHOULD_MATCH`](#juditha_percolate_min_should_match) – raising that knob on a "clean" corpus removes most of the pressure on this cap by pruning weak-overlap candidates at the posting-list stage.
 
 | Setting | When | Cost |
 | --- | --- | --- |
@@ -95,6 +89,25 @@ Maximum number of candidate `Doc`s the percolator's blocking stage returns. Cand
 | `1_000_000` | Investigative / batch jobs where recall trumps latency | linear in candidates surviving blocking |
 
 See [Benchmark](../benchmark.md) for the cost / recall curve at three corpus sizes.
+
+### `JUDITHA_PERCOLATE_MIN_SHOULD_MATCH`
+
+| | |
+| --- | --- |
+| Field | `percolate_min_should_match` |
+| Type | `int` |
+| Default | `2` |
+| Read at | every `Store.percolate` / `percolate()` call |
+| Rebuild needed | no |
+
+`minimum_number_should_match` passed to the percolator blocking `boolean_query` (tantivy 0.26+). Counts the number of distinct input-text tokens a candidate `Doc` must share with the query before BM25 even ranks it.
+
+Default `2` is recall-safe for names whose tokens all clear `MIN_TOKEN_CHARS = 2` (a hardcoded floor in `juditha.percolator` that strips single-char long-tail noise like initials and lone digits, symmetric at index and query time). The percolator only ever phrase-queries names with `>= MIN_TOKEN_COUNT == 2` tokens, so every percolatable doc that clears the char floor contributes >= 2 tokens to the index. Names like `"A Lee"` (where only `"lee"` clears 2 chars) silently miss – accepted as the noise-vs-recall trade-off of the char floor.
+
+| Setting | When | Cost |
+| --- | --- | --- |
+| `2` (default) | Any corpus | Big win on multi-million-cluster corpora: most noise candidates are dropped at the posting-list stage, `percolate_block_limit` rarely binds |
+| `3+` | Long-input batch jobs against multi-token-name corpora where you've measured the cut | Drops names with exactly 2 tokens unless the input shares 3+ tokens with the doc; only use after measuring |
 
 ## Debug
 

@@ -38,13 +38,21 @@ from juditha.model import Mention, get_common_schema
 from juditha.normalizer import tokenize, tokenize_forms
 from juditha.settings import Settings
 
-# Percolator tuning. `min_token_length` is in `Settings` (env
-# `JUDITHA_MIN_TOKEN_LENGTH`, default 4) because both the percolator
-# blocking filter and the AhoExtractor pattern-length floor consume it;
-# changing it requires `juditha build` since the `tokens` field is
-# populated at index time. The blocking-set cap is also in `Settings`
-# (`percolate_block_limit`, env `JUDITHA_PERCOLATE_BLOCK_LIMIT`).
+# Percolator tuning lives on `Settings`: `percolate_block_limit` caps
+# the BM25 candidate pool (env `JUDITHA_PERCOLATE_BLOCK_LIMIT`) and
+# `percolate_min_should_match` sets the minimum overlap required at the
+# `Should` posting-list stage (env `JUDITHA_PERCOLATE_MIN_SHOULD_MATCH`,
+# default 2; recall-safe for names whose tokens all clear
+# MIN_TOKEN_CHARS chars, since the `tokens` field is symmetric with the
+# blocking_set filter).
 MIN_TOKEN_COUNT = 2  # single-token names too noisy to percolate
+# Per-token char floor for the indexed `tokens` field and the query-time
+# `blocking_set`. Hardcoded (not a setting) because the floor must stay
+# symmetric across `Store.put` and `percolate`, and `2` is the smallest
+# value that strips single-char long-tail noise (initials, lone digits,
+# punctuation fragments) without losing real two-letter name parts like
+# "al" in "Al Qamar" or "le" in "Le Pen".
+MIN_TOKEN_CHARS = 2
 
 
 @cache
@@ -155,11 +163,14 @@ def percolate(
     if not text_tokens:
         return []
     text_forms = [t.form for t in text_tokens]
+    blocking_set = {f for f in text_forms if len(f) >= MIN_TOKEN_CHARS}
     # Read settings at call time so env-var changes apply without restart.
     settings = Settings()
-    min_token_length = settings.min_token_length
-    blocking_set = {f for f in text_forms if len(f) >= min_token_length}
-    if not blocking_set:
+    # Need at least `percolate_min_should_match` input tokens for any
+    # candidate to clear the blocking MSM cut, so short-circuit before
+    # hitting tantivy.
+    msm = max(1, settings.percolate_min_should_match)
+    if len(blocking_set) < msm:
         return []
 
     # 2. Block: query the names tantivy index for Docs whose tokens
@@ -170,13 +181,20 @@ def percolate(
     # clauses BM25 ranks docs that match more (and rarer) input tokens
     # higher, so the cap returns the relevant candidates instead of
     # whichever ones tantivy iterated first.
+    #
+    # `minimum_number_should_match` (tantivy 0.26+) drops every doc
+    # that shares fewer than `msm` input tokens at the posting-list
+    # stage, dramatically shrinking the candidate pool before the
+    # `percolate_block_limit` cap matters. Default `msm=2` is
+    # recall-safe by construction (see module docstring).
     Occur = tantivy.Occur
     Q = tantivy.Query
     block_q = Q.boolean_query(
         [
             (Occur.Should, Q.term_query(schema, "tokens", t))
             for t in sorted(blocking_set)
-        ]
+        ],
+        minimum_number_should_match=msm,
     )
     block_limit = settings.percolate_block_limit
     searcher = index.searcher()
@@ -222,9 +240,23 @@ def percolate(
                 if span in seen:
                     continue
                 seen.add(span)
+                # Surface: join the original-case forms of just the
+                # matched tokens with single spaces, rather than the raw
+                # byte slice. The slice picks up whatever punctuation
+                # the tokenizer stripped between tokens (quotes, parens,
+                # periods, table-of-contents page numbers absorbed by
+                # slop), so the captured surface ends up with junk like
+                # `'men". So'` or `'Hizb "Hizb Allah'`. Using each
+                # NormalizedToken's `original` reflects what was
+                # actually matched in the tokenized stream. `start` /
+                # `end` still cover the inclusive byte span if the
+                # caller wants the raw slice via `text[m.start:m.end]`.
+                surface = " ".join(
+                    t.original for t in text_tokens[start_idx : end_idx + 1]
+                )
                 mentions.append(
                     Mention(
-                        text=text[orig_start:orig_end],
+                        text=surface,
                         start=orig_start,
                         end=orig_end,
                         schema=schema_label,

@@ -149,6 +149,76 @@ def test_cli_percolate(monkeypatch, fixtures_path: Path, tmp_path):
     assert '"schema":"PublicBody"' in res.output or "PublicBody" in res.output
 
 
+def test_percolate_short_token_name_matches_at_default_msm(tmp_path):
+    """At the default MSM=2, "Jane Doe" matches: both tokens are
+    indexed in `tokens` (no per-token length filter) and the input
+    contributes both to the blocking set."""
+    entity = make_entity(
+        {
+            "id": "j",
+            "schema": "Person",
+            "properties": {"name": ["Jane Doe"]},
+        }
+    )
+    s = get_store(str(tmp_path / "j"))
+    s.aggregator.load_entities([entity])
+    s.build()
+    mentions = s.percolate("Jane Doe was here.")
+    assert any(m.text == "Jane Doe" for m in mentions)
+
+
+def test_percolate_surface_strips_punctuation_between_tokens(tmp_path):
+    """When the tokenizer strips punctuation between two matched
+    tokens (quotes, periods, hyphens), the captured `text` reflects
+    the matched-token reconstruction, not the raw byte slice. `start`
+    / `end` still bracket the inclusive original span so callers can
+    recover the raw slice if needed."""
+    entity = make_entity(
+        {
+            "id": "ms",
+            "schema": "Organization",
+            "properties": {"name": ["men so"]},
+        }
+    )
+    s = get_store(str(tmp_path / "ms"))
+    s.aggregator.load_entities([entity])
+    s.build()
+    text = 'foo bar men". So baz'
+    mentions = s.percolate(text)
+    assert len(mentions) == 1
+    m = mentions[0]
+    assert m.text == "men So"
+    raw = text[m.start : m.end]
+    assert raw == 'men". So'
+
+
+def test_percolate_surface_slop_drops_intervening_punctuation(tmp_path):
+    """At slop=1 the surface contains intervening tokens (intended)
+    but NOT the punctuation between them."""
+    entity = make_entity(
+        {
+            "id": "j",
+            "schema": "Person",
+            "properties": {"name": ["Jane Doe"]},
+        }
+    )
+    s = get_store(str(tmp_path / "jslop"))
+    s.aggregator.load_entities([entity])
+    s.build()
+    text = "Jane M. Doe was here."
+    mentions = s.percolate(text, slop=1)
+    assert len(mentions) == 1
+    m = mentions[0]
+    assert m.text == "Jane M Doe"
+    assert text[m.start : m.end] == "Jane M. Doe"
+
+
+def test_percolate_one_token_input_short_circuits(percolatable):
+    """Inputs with fewer tokens than `percolate_min_should_match`
+    short-circuit to []. Single-token inputs can't satisfy MSM=2."""
+    assert percolatable.percolate("Parliament.") == []
+
+
 def test_cli_percolate_slop(monkeypatch, tmp_path):
     """`juditha percolate --slop 1` finds "Jane M. Doe" for stored "Jane Doe"."""
     get_store.cache_clear()
@@ -173,4 +243,6 @@ def test_cli_percolate_slop(monkeypatch, tmp_path):
 
     res = runner.invoke(cli, ["percolate", "-i", str(text_path), "--slop", "1"])
     assert res.exit_code == 0
-    assert "Jane M. Doe" in res.output
+    # Surface is the matched-token reconstruction (period stripped),
+    # not the raw slice; raw slice is recoverable via start/end.
+    assert "Jane M Doe" in res.output
