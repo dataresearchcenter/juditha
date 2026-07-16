@@ -16,9 +16,9 @@ classifiers = [
 ]
 requires-python = ">=3.11,<3.15"
 dependencies = [
-    "anystore (>=1.2.4,<2.0.0)",
+    "anystore (>=1.2.5,<2.0.0)",
     "followthemoney (>=4.10.0,<5.0.0)",
-    "ftmq[level] (>=4.9.2,<5.0.0)",
+    "ftmq[level] (>=4.10.0,<5.0.0)",
     "rigour (>=2.1.2,<3.0.0)",
     "rapidfuzz (>=3.9.0,<4.0.0)",
     "jellyfish (>=1.2.1,<2.0.0)",
