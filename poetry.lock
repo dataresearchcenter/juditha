@@ -557,24 +557,6 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
-name = "click-default-group"
-version = "1.2.4"
-description = "click_default_group"
-optional = false
-python-versions = ">=2.7"
-groups = ["main"]
-files = [
-    {file = "click_default_group-1.2.4-py2.py3-none-any.whl", hash = "sha256:9b60486923720e7fc61731bdb32b617039aba820e22e1c88766b1125592eaa5f"},
-    {file = "click_default_group-1.2.4.tar.gz", hash = "sha256:eb3f3c99ec0d456ca6cd2a7f08f7d4e91771bef51b01bdd9580cc6450fe1251e"},
-]
-
-[package.dependencies]
-click = "*"
-
-[package.extras]
-test = ["pytest"]
-
-[[package]]
 name = "cloudpickle"
 version = "3.1.2"
 description = "Pickler class to extend the standard pickle.Pickler functionality"
@@ -994,31 +976,38 @@ name = "ftmq"
 version = "4.10.1"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = "<3.15,>=3.11"
+python-versions = ">=3.11,<3.15"
 groups = ["main"]
-files = [
-    {file = "ftmq-4.10.1-py3-none-any.whl", hash = "sha256:8014750803858dd8dcfe22725ea68ab6843a514ecbb120a612d087c3d8ed9854"},
-    {file = "ftmq-4.10.1.tar.gz", hash = "sha256:d4f8698ccaf3308638fa64cd10516340f4b20cf772a06cfc94868346c5e75573"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-anystore = ">=1.2.5,<2.0.0"
-click = ">=8.4.2,<9.0.0"
-click-default-group = ">=1.2.4,<2.0.0"
-followthemoney = ">=4.10.1,<5.0.0"
-nomenklatura = ">=4.13.0,<5.0.0"
+anystore = ">=1.2.6,<2.0.0"
+followthemoney = ">=4.10.2,<5.0.0"
+nomenklatura = ">=4.13.2,<5.0.0"
 normality = ">=3.1.0,<4.0.0"
 orjson = ">=3.10.18,<4.0.0"
-pydantic = ">=2.13.3,<3.0.0"
+plyvel = {version = ">=1.5.1,<2.0.0", optional = true}
+pyrql = ">=0.7.11,<1.0.0"
 rigour = ">=2.3.1,<3.0.0"
+typer = ">=0.26.8,<1"
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
-lake = ["deltalake (>=1.6.2,<2.0.0)", "duckdb (>=1.5.5,<2.0.0)", "pandas (>=3.0.5,<4.0.0)", "pyarrow (>=24.0.0,<25.0.0)"]
+api = ["fastapi (>=0.139.2,<0.140.0)", "furl (>=2.1.4,<3.0.0)", "granian (>=2.7.9,<3.0.0)"]
+duckdb = ["duckdb-engine (>=0.17.0,<0.18.0)", "sqlalchemy (>=2.0.51,<3.0.0)"]
+lake = ["deltalake (>=1.6.2,<2.0.0)", "duckdb (>=1.5.5,<2.0.0)", "pandas (>=3.0.5,<4.0.0)", "pyarrow (>=25.0.0,<26.0.0)"]
 level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.51,<3.0.0)"]
 redis = ["fakeredis (>=2.37.0,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
+search = ["tantivy (>=0.26.0,<0.27.0)"]
 sql = ["sqlalchemy (>=2.0.51,<3.0.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/dataresearchcenter/ftmq.git"
+reference = "refactor/ql"
+resolved_reference = "3687b4996e5f071a9dbf2911ee88c202846ff4e4"
 
 [[package]]
 name = "greenlet"
@@ -2555,6 +2544,23 @@ dev = ["pre-commit", "tox"]
 testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
+name = "plyvel"
+version = "1.5.1"
+description = "Plyvel, a fast and feature-rich Python interface to LevelDB"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "plyvel-1.5.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a8394aed946000fca2c92d7ae8537d9907c8169debf7f55c7ecb53751f3bf4e7"},
+    {file = "plyvel-1.5.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:54f364f566470f5acaed0a00fea8860736120a711214190a17ee73dcbe1a2261"},
+    {file = "plyvel-1.5.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8b26b09d6ae9c679c877153aa4bd7f763e5e983a61b7c0c955653e7a494b6126"},
+    {file = "plyvel-1.5.1-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fc224b38a324fa7b5d5384e649fa00b4eeb053966f82515198754e9e77ad6d61"},
+    {file = "plyvel-1.5.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ba466219943e657998cc1f67ddeeb432809596736419e9082f9c7f921eaf3202"},
+    {file = "plyvel-1.5.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3c87ceb9362548bb9acca2deec291893928dd9042048f040db76353ae41a45af"},
+    {file = "plyvel-1.5.1.tar.gz", hash = "sha256:3caf6009e4fc24fbf8712d3f5ef3da7e56495c26a488df2161218fc34e46019c"},
+]
+
+[[package]]
 name = "pre-commit"
 version = "4.6.2"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
@@ -2947,6 +2953,22 @@ files = [
 
 [package.extras]
 diagrams = ["jinja2", "railroad-diagrams"]
+
+[[package]]
+name = "pyrql"
+version = "0.7.11"
+description = "RQL parsing"
+optional = false
+python-versions = "~=3.8"
+groups = ["main"]
+files = [
+    {file = "pyrql-0.7.11-py3-none-any.whl", hash = "sha256:fb756eae1b6178257715c018856eb5acd93d6c463db20e16d9c166b8e4a36f0d"},
+    {file = "pyrql-0.7.11.tar.gz", hash = "sha256:c7f66135cd53410bb46115a0d801114f4c470951b23e3e66c13a503fbbb3778b"},
+]
+
+[package.dependencies]
+pyparsing = ">=3.1,<4.0"
+python-dateutil = ">=2.8,<3.0"
 
 [[package]]
 name = "pytest"
@@ -4257,4 +4279,4 @@ tomli = ">=2.4.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "a9fcd352abd3376a62b97b0249117f71f1be230af27b8c6be34e7b6c0204d3ec"
+content-hash = "70554d725db30a35daff2479ad28609f96ec92ce77a087b9905d659e1f07a47f"

@@ -1,7 +1,7 @@
 from anystore.io import logged_items, smart_stream
 from anystore.logging import get_logger
 from anystore.types import Uri
-from ftmq import Query
+from ftmq import M, Query
 from ftmq.io import smart_read_proxies
 from ftmq.model.dataset import Catalog, Dataset
 from ftmq.util import make_entity
@@ -11,8 +11,7 @@ from juditha.store import Store, get_store
 log = get_logger(__name__)
 
 
-SCHEMATA = ["LegalEntity", "Organization", "PublicBody", "Company", "Person", "Address"]
-Q = Query().where(schema__in=SCHEMATA)
+Q = Query(M(schemata="LegalEntity") | M(schema="Address"))
 
 
 def load_proxies(

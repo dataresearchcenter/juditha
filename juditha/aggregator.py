@@ -10,8 +10,7 @@ from typing import Iterable, Self
 
 import plyvel
 from anystore.logging import get_logger
-from followthemoney import EntityProxy, registry
-from ftmq.enums import Schemata
+from followthemoney import EntityProxy, model, registry
 from rigour.names import pick_name
 
 from juditha.model import Doc, Docs
@@ -28,9 +27,9 @@ def unpack_entity(e: EntityProxy) -> dict | None:
     for prop in NAMES:
         names.update(e.get(prop))
     caption = e.caption
-    if caption in Schemata:
+    if caption in model.schemata:
         caption = pick_name(list(names))
-    if caption is not None and caption not in Schemata and len(caption) > 5:
+    if caption is not None and caption not in model.schemata and len(caption) > 5:
         key = n(caption)
         if key:
             return {
