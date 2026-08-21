@@ -7,8 +7,9 @@ from anystore.logging import configure_logging
 from rich import print
 
 from juditha import __version__, io
+from juditha.rpc.server import serve
 from juditha.settings import Settings
-from juditha.store import get_store, lookup
+from juditha.store import get_build_store, get_store, lookup
 
 settings = Settings()
 
@@ -86,7 +87,7 @@ def cli_iterate(
 ):
     """Iterate through names.db"""
     with ErrorHandler():
-        store = get_store()
+        store = get_build_store()
         smart_write_models(output_uri, store.aggregator.iterate())
 
 
@@ -131,5 +132,18 @@ def cli_percolate(
 @cli.command("build")
 def cli_build():
     with ErrorHandler():
-        store = get_store()
+        store = get_build_store()
         store.build()
+
+
+@cli.command("serve")
+def cli_serve(
+    host: Annotated[str, typer.Option(..., help="Bind host")] = settings.rpc_host,
+    port: Annotated[int, typer.Option(..., help="Bind port")] = settings.rpc_port,
+    workers: Annotated[
+        int, typer.Option(..., help="Server thread pool size")
+    ] = settings.rpc_workers,
+) -> None:
+    """Serve the store over gRPC (read-only, no authentication)."""
+    with ErrorHandler():
+        serve(host=host, port=port, workers=workers)

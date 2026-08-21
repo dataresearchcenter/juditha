@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 from juditha import io
 from juditha.cli import cli
-from juditha.store import get_store
+from juditha.store import get_build_store, get_store
 
 runner = CliRunner()
 
@@ -73,7 +73,7 @@ def test_percolate_single_token_excluded(tmp_path):
                 "properties": {"name": [name]},
             }
         )
-        s = get_store(str(tmp_path / f"s_{name}"))
+        s = get_build_store(str(tmp_path / f"s_{name}"))
         s.aggregator.load_entities([entity])
         s.build()
         assert s.percolate(f"We met {name} today.") == []
@@ -88,7 +88,7 @@ def test_percolate_multi_token_included(tmp_path):
             "properties": {"name": ["Al Qamar"]},
         }
     )
-    s = get_store(str(tmp_path / "multi"))
+    s = get_build_store(str(tmp_path / "multi"))
     s.aggregator.load_entities([entity])
     s.build()
     mentions = s.percolate("The group Al Qamar was mentioned.")
@@ -117,7 +117,7 @@ def test_percolate_slop(tmp_path):
             "properties": {"name": ["Jane Doe"]},
         }
     )
-    s = get_store(str(tmp_path / "slop"))
+    s = get_build_store(str(tmp_path / "slop"))
     s.aggregator.load_entities([entity])
     s.build()
     text = "Jane M. Doe was here."
@@ -135,8 +135,9 @@ def test_percolate_slop(tmp_path):
 def test_cli_percolate(monkeypatch, fixtures_path: Path, tmp_path):
     """`juditha percolate` reads stdin/file, writes mentions to stdout."""
     get_store.cache_clear()
+    get_build_store.cache_clear()
     monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
-    store = get_store()
+    store = get_build_store()
     io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
     store.build()
 
@@ -160,7 +161,7 @@ def test_percolate_short_token_name_matches_at_default_msm(tmp_path):
             "properties": {"name": ["Jane Doe"]},
         }
     )
-    s = get_store(str(tmp_path / "j"))
+    s = get_build_store(str(tmp_path / "j"))
     s.aggregator.load_entities([entity])
     s.build()
     mentions = s.percolate("Jane Doe was here.")
@@ -180,7 +181,7 @@ def test_percolate_surface_strips_punctuation_between_tokens(tmp_path):
             "properties": {"name": ["men so"]},
         }
     )
-    s = get_store(str(tmp_path / "ms"))
+    s = get_build_store(str(tmp_path / "ms"))
     s.aggregator.load_entities([entity])
     s.build()
     text = 'foo bar men". So baz'
@@ -202,7 +203,7 @@ def test_percolate_surface_slop_drops_intervening_punctuation(tmp_path):
             "properties": {"name": ["Jane Doe"]},
         }
     )
-    s = get_store(str(tmp_path / "jslop"))
+    s = get_build_store(str(tmp_path / "jslop"))
     s.aggregator.load_entities([entity])
     s.build()
     text = "Jane M. Doe was here."
@@ -222,8 +223,9 @@ def test_percolate_one_token_input_short_circuits(percolatable):
 def test_cli_percolate_slop(monkeypatch, tmp_path):
     """`juditha percolate --slop 1` finds "Jane M. Doe" for stored "Jane Doe"."""
     get_store.cache_clear()
+    get_build_store.cache_clear()
     monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
-    store = get_store()
+    store = get_build_store()
     entity = make_entity(
         {
             "id": "j",

@@ -15,6 +15,22 @@ A super-fast in-process lookup service for canonical names, backed by [tantivy](
 
 The implementation uses a pre-populated names database and index. Data is either [FollowTheMoney](https://followthemoney.tech) entities or simply list of names.
 
+## Run as a service
+
+`juditha` is an in-process library first, but the read-only half of the store can be served over gRPC so several workers share one built corpus:
+
+```bash
+JUDITHA_URI=/var/lib/juditha juditha serve --host 0.0.0.0
+```
+
+Clients just point `JUDITHA_URI` at it, and `lookup` / `extract` / `percolate` go over the wire unchanged:
+
+```bash
+JUDITHA_URI=grpc://localhost:50051 juditha lookup "Jane Doe"
+```
+
+There is no authentication, so keep it on a private network. Docker image: `ghcr.io/dataresearchcenter/juditha`, mount a built store at `/data`.
+
 ## Documentation
 
 https://docs.investigraph.dev/lib/juditha

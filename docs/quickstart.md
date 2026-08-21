@@ -80,9 +80,23 @@ juditha lookup "Jane Doe"
 
 Inside Python the same env var is read by `juditha.settings.Settings`; you can also pass `uri=` explicitly to `lookup()` or `get_store()`.
 
+To share one built corpus across several workers or hosts, point `JUDITHA_URI` at a `juditha serve` process instead of at a directory:
+
+```bash
+# on the host that holds the store
+JUDITHA_URI=/var/lib/juditha juditha serve --host 0.0.0.0
+
+# in the worker
+export JUDITHA_URI=grpc://juditha-host:50051
+juditha lookup "Jane Doe"
+```
+
+Everything read-only (`lookup`, `extract`, `percolate`) then goes over the wire unchanged. See [Usage / gRPC api](usage/api.md).
+
 ## Next
 
 - Load real data: [Names](load-data/names.md), [Entities](load-data/entities.md).
 - Drive it from a shell pipeline: [Usage / CLI](usage/cli.md), [CLI reference](cli-reference.md).
 - Embed in a worker: [Usage / Python](usage/python.md).
+- Share one corpus across workers: [Usage / gRPC api](usage/api.md).
 - Pull mentions out of a fulltext: [Extract](extras/extract.md), [Percolate](extras/percolate.md).

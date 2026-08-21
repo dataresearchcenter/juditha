@@ -6,7 +6,7 @@ from ftmq.io import smart_read_proxies
 from ftmq.model.dataset import Catalog, Dataset
 from ftmq.util import make_entity
 
-from juditha.store import Store, get_store
+from juditha.store import BuildStore, get_build_store
 
 log = get_logger(__name__)
 
@@ -15,9 +15,9 @@ Q = Query(M(schemata="LegalEntity") | M(schema="Address"))
 
 
 def load_proxies(
-    uri: Uri, store: Store | None = None, sync: bool | None = False
+    uri: Uri, store: BuildStore | None = None, sync: bool | None = False
 ) -> None:
-    store = store or get_store()
+    store = store or get_build_store()
     entities = logged_items(
         Q.apply_iter(smart_read_proxies(uri)),
         "Load",
@@ -31,9 +31,9 @@ def load_proxies(
 
 
 def load_dataset(
-    uri: Uri, store: Store | None = None, sync: bool | None = False
+    uri: Uri, store: BuildStore | None = None, sync: bool | None = False
 ) -> None:
-    store = store or get_store()
+    store = store or get_build_store()
     dataset = Dataset._from_uri(uri)
     log.info(f"[{dataset.name}] Loading ...")
     entities = logged_items(
@@ -49,9 +49,9 @@ def load_dataset(
 
 
 def load_catalog(
-    uri: Uri, store: Store | None = None, sync: bool | None = False
+    uri: Uri, store: BuildStore | None = None, sync: bool | None = False
 ) -> None:
-    store = store or get_store()
+    store = store or get_build_store()
     catalog = Catalog._from_uri(uri)
     for dataset in catalog.datasets:
         if dataset.uri:
@@ -60,8 +60,10 @@ def load_catalog(
         store.build()
 
 
-def load_names(uri: Uri, store: Store | None = None, schema: str | None = None) -> None:
-    store = store or get_store()
+def load_names(
+    uri: Uri, store: BuildStore | None = None, schema: str | None = None
+) -> None:
+    store = store or get_build_store()
     schema = schema or "LegalEntity"
     with store.aggregator:
         for i, name in enumerate(

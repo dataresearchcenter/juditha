@@ -4,6 +4,8 @@ Complete reference for every `juditha` subcommand. For high-level workflow, see 
 
 Every command honours the global `JUDITHA_*` environment variables documented in [Usage / CLI / Environment variables](usage/cli.md#environment-variables).
 
+`lookup`, `extract` and `percolate` also work against a remote store: point `JUDITHA_URI` at `grpc://host:port`. The `load-*` commands, `build` and `iterate` need the local LevelDB aggregator and are local-only.
+
 ## Top-level
 
 ```text
@@ -137,3 +139,19 @@ juditha percolate [OPTIONS]
 | `-i` | `-` | Input URI (the document to scan). |
 | `-o` | `-` | Output URI (the mention stream). |
 | `--slop` | `0` | Allowed intervening tokens between name parts. `0` = exact phrase. |
+
+## serve
+
+Serve the read-only store surface (`search`, `extract`, `percolate`) over gRPC. No authentication, no TLS. See [Usage / gRPC api](usage/api.md).
+
+```text
+juditha serve [OPTIONS]
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--host` | `localhost` | Bind host. `JUDITHA_RPC_HOST`. |
+| `--port` | `50051` | Bind port. `JUDITHA_RPC_PORT`. |
+| `--workers` | `10` | Server thread pool size. `JUDITHA_RPC_WORKERS`. |
+
+Serves the store at `JUDITHA_URI`. Runs until terminated.

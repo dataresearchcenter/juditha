@@ -47,10 +47,10 @@ curl -s https://example.org/list.txt | juditha load-names
 ## From Python
 
 ```python
-from juditha import get_store
+from juditha import get_build_store
 from juditha import io
 
-store = get_store()
+store = get_build_store()
 io.load_names("names.txt", store)
 # or pipe-style from stdin:
 io.load_names("-", store)
@@ -67,7 +67,7 @@ io.load_names("people.txt",    store, schema="Person")
 
 ## What happens under the hood
 
-Each name is wrapped into a minimal FTM entity (id `name-<n>`, schema as configured, `name` property set to the input string) and pushed into the LevelDB aggregator via `Store.aggregator.put`. The aggregator clusters entries by `name_key` (order-independent, accent-stripped, prefix-cleaned canonical form), so multiple invocations of `load-names` accumulate – they don't overwrite.
+Each name is wrapped into a minimal FTM entity (id `name-<n>`, schema as configured, `name` property set to the input string) and pushed into the LevelDB aggregator via `BuildStore.aggregator.put`. The aggregator clusters entries by `name_key` (order-independent, accent-stripped, prefix-cleaned canonical form), so multiple invocations of `load-names` accumulate – they don't overwrite.
 
 To make the loaded data searchable you must run `juditha build` (or `store.build()` from Python). Until then `juditha lookup` will not see the new names.
 

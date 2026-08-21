@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from ftmq.io import smart_read_proxies
 
-from juditha.store import get_store
+from juditha.store import get_build_store
 
 FIXTURES_PATH = (Path(__file__).parent / "fixtures").absolute()
 
@@ -20,4 +20,5 @@ def eu_authorities():
 
 @pytest.fixture()
 def store(tmp_path):
-    return get_store(str(tmp_path / "juditha"))
+    """Write-capable store: loading and building need the aggregator."""
+    return get_build_store(str(tmp_path / "juditha"))

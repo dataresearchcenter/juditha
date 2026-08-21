@@ -43,6 +43,8 @@ Inside the directory you will find:
 
 You can wipe everything with `rm -rf "$JUDITHA_URI"` and start over.
 
+`JUDITHA_URI` can also point at a running server instead of a directory: `grpc://host:port` makes `lookup`, `extract` and `percolate` query it remotely. See [Usage / gRPC api](api.md). The `load-*` commands, `build` and `iterate` need the local LevelDB aggregator and reject a `grpc://` URI.
+
 ## Input and output URIs
 
 Every command accepts `-i URI` for input and (where it produces output) `-o URI` for output. URIs are handled by [anystore](https://docs.investigraph.dev/lib/anystore/), so anything anystore knows about works:

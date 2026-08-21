@@ -22,6 +22,7 @@ the rerank stage.
 
 import multiprocessing
 import time
+from abc import ABC, abstractmethod
 from functools import cache, lru_cache
 from typing import Iterable, Self
 
@@ -45,6 +46,8 @@ NUM_CPU = multiprocessing.cpu_count()
 INDEX = "tantivy.db"
 NAMES = "names.db"
 AHO = "automaton.txt"
+# URI scheme that routes `get_store` to the gRPC client instead of a local index
+GRPC_SCHEME = "grpc://"
 
 
 log = get_logger(__name__)
@@ -190,23 +193,158 @@ def build_query(
     return Q.boolean_query(clauses)
 
 
-class Store:
+class BaseStore(ABC):
+    """Read-only store surface: the part that can live behind a network hop.
+
+    `Store` implements it against a local tantivy index, `ApiStore`
+    (`juditha.rpc.client`) against a remote juditha gRPC server. The build
+    half is deliberately absent here — loading and indexing are local-only
+    and live on `BuildStore`.
+    """
+
+    uri: str
+
+    @abstractmethod
+    def search(
+        self,
+        q: str,
+        threshold: float | None = None,
+        limit: int | None = None,
+        schemata: Iterable[str] | None = None,
+    ) -> Result | None:
+        """Best canonical match for `q`, or None below `threshold`."""
+
+    @abstractmethod
+    def extract(self, text: str) -> list[Mention]:
+        """Known-name mentions in `text`, via the Aho-Corasick automaton."""
+
+    @abstractmethod
+    def percolate(self, text: str, slop: int = 0) -> list[Mention]:
+        """Known-name mentions in `text`, via tantivy reverse-search."""
+
+    # B027: deliberately concrete, not abstract. A local read store holds
+    # nothing that needs releasing; BuildStore and ApiStore override it.
+    def close(self) -> None:  # noqa: B027
+        """Release implementation-held resources. No-op unless overridden."""
+
+    def __enter__(self) -> Self:
+        return self
+
+    # B027: same. BuildStore overrides this to flush pending writes, for a
+    # read-only store leaving the block has nothing to do.
+    def __exit__(self, *_args: object) -> None:  # noqa: B027
+        pass
+
+
+class Store(BaseStore):
+    """Local read-only store: tantivy index + Aho-Corasick automaton.
+
+    Deliberately does not open the LevelDB aggregator — plyvel takes an
+    exclusive lock per path, so opening it here would cap the host at one
+    juditha reader process. Anything that writes uses `BuildStore`.
+    """
+
     def __init__(self, uri: str | None):
         self.uri = uri or settings.uri
         self._schema = make_schema()
         # Tantivy mmap on disk so the OS page cache is shared across all
         # procrastinate workers on the host (memory footprint is 1×, not N×).
         self.index = tantivy.Index(self._schema, ensure_index_path(self.uri))
+        self._extractor: AhoExtractor | None = None
+        self.index.reload()
+        log.info("👋", store=self.uri)
+
+    @property
+    def extractor(self) -> AhoExtractor:
+        if self._extractor is None:
+            self._extractor = AhoExtractor()
+            aho_path = path_from_uri(self.uri) / AHO
+            self._extractor.load(aho_path)
+        return self._extractor
+
+    def search(
+        self,
+        q: str,
+        threshold: float | None = None,
+        limit: int | None = None,
+        schemata: Iterable[str] | None = None,
+    ) -> Result | None:
+        t0 = time.perf_counter()
+        threshold = threshold if threshold is not None else settings.fuzzy_threshold
+        limit = limit if limit is not None else settings.limit
+        clean_q = name_key(q)
+        if not clean_q or len(clean_q) < settings.min_length:
+            return None
+
+        schemata_set = set(schemata) if schemata else None
+        phon_codes = _phonetic_codes(q)
+        query = build_query(
+            self._schema,
+            clean_q,
+            schemata=schemata_set,
+            phonetic_codes=phon_codes,
+        )
+
+        searcher = self.index.searcher()
+        hits = searcher.search(query, limit).hits
+
+        deferred: list[Doc] = []
+        for _, addr in hits:
+            tdoc = searcher.doc(addr)
+            data = tdoc.to_dict()
+            doc = Doc(
+                key=tdoc.get_first("key") or "",
+                names=set(data.get("names", [])),
+                aliases=set(data.get("aliases", [])),
+                countries=set(data.get("countries", [])),
+                schemata=set(data.get("schemata", [])),
+            )
+            score = jellyfish.jaro_similarity(clean_q, doc.key)
+            if score > threshold:
+                took = (time.perf_counter() - t0) * 1000
+                return Result.from_doc(doc, q, score, took=took)
+            deferred.append(doc)
+
+        # Second pass: rapidfuzz over each hit's full surface-form set, to
+        # catch alias-driven matches that don't rank on `key`.
+        for doc in deferred:
+            res = process.extractOne(clean_q, [name_key(n) for n in doc.names])
+            if res is not None:
+                score = res[1] / 100
+                if score > threshold:
+                    took = (time.perf_counter() - t0) * 1000
+                    return Result.from_doc(doc, q, score, took=took)
+        return None
+
+    def extract(self, text: str) -> list[Mention]:
+        return self.extractor.extract(text)
+
+    def percolate(self, text: str, slop: int = 0) -> list[Mention]:
+        """Reverse-search the names index for mentions in `text`.
+
+        Thin wrapper around `juditha.percolator.percolate`. See that
+        module for the algorithm.
+        """
+        return percolate(self._schema, self.index, text, slop=slop)
+
+
+class BuildStore(Store):
+    """Local read/write store: adds the LevelDB aggregator and tantivy writer.
+
+    Local-only by definition — the API surface never exposes the write
+    path. Inherits the read methods so `build()` can be followed by a
+    `search()` on the same object.
+    """
+
+    def __init__(self, uri: str | None):
+        super().__init__(uri)
         self.aggregator = Aggregator(ensure_db_path(self.uri))
 
         self.buffer: list[tantivy.Document] = []
-        self._extractor: AhoExtractor | None = None
         # Lazy persistent writer: tantivy IndexWriter is heavy
         # (heap_size × num_threads bytes); reuse across flush() calls
         # instead of allocating one per batch.
         self._writer: tantivy.IndexWriter | None = None
-        self.index.reload()
-        log.info("👋", store=self.uri)
 
     def _get_writer(self) -> tantivy.IndexWriter:
         if self._writer is None:
@@ -220,14 +358,6 @@ class Store:
         if self._writer is not None:
             self._writer.wait_merging_threads()
             self._writer = None
-
-    @property
-    def extractor(self) -> AhoExtractor:
-        if self._extractor is None:
-            self._extractor = AhoExtractor()
-            aho_path = path_from_uri(self.uri) / AHO
-            self._extractor.load(aho_path)
-        return self._extractor
 
     def put(self, doc: Doc) -> None:
         """Buffer a Doc for tantivy indexing; flushes every 100k."""
@@ -315,71 +445,11 @@ class Store:
         self._extractor.finalize()
         aho_path = path_from_uri(self.uri) / AHO
         self._extractor.save(aho_path)
-
-    def search(
-        self,
-        q: str,
-        threshold: float | None = None,
-        limit: int | None = None,
-        schemata: Iterable[str] | None = None,
-    ) -> Result | None:
-        t0 = time.perf_counter()
-        threshold = threshold if threshold is not None else settings.fuzzy_threshold
-        limit = limit if limit is not None else settings.limit
-        clean_q = name_key(q)
-        if not clean_q or len(clean_q) < settings.min_length:
-            return None
-
-        schemata_set = set(schemata) if schemata else None
-        phon_codes = _phonetic_codes(q)
-        query = build_query(
-            self._schema,
-            clean_q,
-            schemata=schemata_set,
-            phonetic_codes=phon_codes,
-        )
-
-        searcher = self.index.searcher()
-        hits = searcher.search(query, limit).hits
-
-        deferred: list[Doc] = []
-        for _, addr in hits:
-            tdoc = searcher.doc(addr)
-            data = tdoc.to_dict()
-            doc = Doc(
-                key=tdoc.get_first("key") or "",
-                names=set(data.get("names", [])),
-                aliases=set(data.get("aliases", [])),
-                countries=set(data.get("countries", [])),
-                schemata=set(data.get("schemata", [])),
-            )
-            score = jellyfish.jaro_similarity(clean_q, doc.key)
-            if score > threshold:
-                took = (time.perf_counter() - t0) * 1000
-                return Result.from_doc(doc, q, score, took=took)
-            deferred.append(doc)
-
-        # Second pass: rapidfuzz over each hit's full surface-form set, to
-        # catch alias-driven matches that don't rank on `key`.
-        for doc in deferred:
-            res = process.extractOne(clean_q, [name_key(n) for n in doc.names])
-            if res is not None:
-                score = res[1] / 100
-                if score > threshold:
-                    took = (time.perf_counter() - t0) * 1000
-                    return Result.from_doc(doc, q, score, took=took)
-        return None
-
-    def extract(self, text: str) -> list[Mention]:
-        return self.extractor.extract(text)
-
-    def percolate(self, text: str, slop: int = 0) -> list[Mention]:
-        """Reverse-search the names index for mentions in `text`.
-
-        Thin wrapper around `juditha.percolator.percolate`. See that
-        module for the algorithm.
-        """
-        return percolate(self._schema, self.index, text, slop=slop)
+        # A read-only Store cached for this uri still holds a handle on the
+        # index directory we just rm_rf'd and would keep serving its deleted
+        # segments. functools.cache has no per-key eviction, so drop the whole
+        # read registry — those stores are cheap to recreate lazily.
+        _store_for_uri.cache_clear()
 
     def close(self) -> None:
         """Flush pending writes and release tantivy writer + LevelDB handles.
@@ -393,9 +463,6 @@ class Store:
         self._release_writer()
         self.aggregator.close()
 
-    def __enter__(self) -> Self:
-        return self
-
     def __exit__(self, *_args: object) -> None:
         # Context-manager exit flushes pending writes but does NOT close —
         # build() uses `with self as store:` and we still want lookup /
@@ -404,17 +471,23 @@ class Store:
 
 
 @cache
-def _store_for_uri(uri: str) -> Store:
-    """Cache one Store per resolved URI.
+def _store_for_uri(uri: str) -> BaseStore:
+    """Cache one read-only store per resolved URI."""
+    if uri.startswith(GRPC_SCHEME):
+        # Local import: juditha.rpc.client imports BaseStore from this module.
+        from juditha.rpc.client import ApiStore
 
-    plyvel only allows one open handle per LevelDB path, so the registry
-    is effectively a per-URI singleton.
-    """
+        return ApiStore(uri)
     return Store(uri)
 
 
-def get_store(uri: Uri | None = None) -> Store:
-    """Return the cached Store for `uri` (or for the env-resolved URI).
+def get_store(uri: Uri | None = None) -> BaseStore:
+    """Return the cached read-only store for `uri` (or the env-resolved URI).
+
+    A `grpc://` URI yields an `ApiStore` that proxies to a remote juditha
+    server, anything else a local `Store`. The scheme check has to happen
+    here: `path_from_uri` happily turns `grpc://host:50051` into the local
+    path `/host:50051` instead of raising.
 
     Unlike a direct `@cache` decorator, this resolves None against the
     current `Settings()` *at call time*, so changes to `JUDITHA_URI`
@@ -426,6 +499,31 @@ def get_store(uri: Uri | None = None) -> Store:
 # Backward-compat alias for code (and tests) that calls
 # `get_store.cache_clear()`. Clears the underlying per-URI registry.
 get_store.cache_clear = _store_for_uri.cache_clear  # type: ignore[attr-defined]
+
+
+@cache
+def _build_store_for_uri(uri: str) -> BuildStore:
+    """Cache one BuildStore per resolved URI.
+
+    plyvel only allows one open handle per LevelDB path, so the registry
+    is effectively a per-URI singleton.
+    """
+    return BuildStore(uri)
+
+
+def get_build_store(uri: Uri | None = None) -> BuildStore:
+    """Return the cached BuildStore for `uri` (or for the env-resolved URI).
+
+    Loading and building are local-only, so a remote URI is an error here
+    rather than something to proxy.
+    """
+    uri = str(uri) if uri is not None else Settings().uri
+    if uri.startswith(GRPC_SCHEME):
+        raise ValueError(f"Cannot build or write to a remote store: `{uri}`")
+    return _build_store_for_uri(uri)
+
+
+get_build_store.cache_clear = _build_store_for_uri.cache_clear  # type: ignore[attr-defined]
 
 
 @lru_cache(100_000)

@@ -1,16 +1,16 @@
 # Usage / Python
 
-`juditha` is in-process. Import it, get a `Store`, call its methods. There is no HTTP API and no client / server split.
+`juditha` is in-process by default. Import it, get a `Store`, call its methods. It can also be [served over gRPC](api.md), in which case the same calls go over the wire without any call-site change.
 
 ## The minimal API
 
-The package re-exports two helpers:
+The package re-exports three helpers:
 
 ```python
-from juditha import lookup, get_store
+from juditha import lookup, get_store, get_build_store
 ```
 
-`lookup` is a memoised, top-level convenience for the most common case (one query, one best match). `get_store` returns the (cached) `Store` object for fine-grained access (search with filters, extraction, percolation, iterating the aggregator).
+`lookup` is a memoised, top-level convenience for the most common case (one query, one best match). `get_store` returns the (cached) read-only store for querying (search with filters, extraction, percolation). `get_build_store` returns the (cached) write-capable store for loading data and building the index.
 
 ## `lookup()`
 
@@ -40,16 +40,17 @@ res.caption        # human-readable display name
 res.common_schema  # e.g. "Person", "Organization", "LegalEntity"
 ```
 
-## `get_store()` and the `Store` class
+## Reading: `get_store()` and the `Store` class
 
 ```python
 from juditha import get_store
 
-store = get_store()                  # uses settings.uri (env var or default)
+store = get_store()                   # uses settings.uri (env var or default)
 store = get_store("/var/lib/juditha") # explicit path
+store = get_store("grpc://juditha:50051")  # remote, see the gRPC api page
 ```
 
-`get_store` resolves the URI at call time and caches one `Store` per resolved URI. plyvel allows only one open handle per LevelDB path, so this cache is effectively a per-URI singleton.
+`get_store` resolves the URI at call time and caches one store per resolved URI. A `grpc://` URI yields an `ApiStore` that proxies to a [remote server](api.md), anything else a local `Store` reading the tantivy index and the Aho-Corasick automaton.
 
 The methods you will use most:
 
@@ -66,13 +67,17 @@ mentions = store.percolate("Some text mentioning Jane Doe.", slop=0)
 
 `extract` and `percolate` both return `list[Mention]`. See [Extract](../extras/extract.md) and [Percolate](../extras/percolate.md) for the differences.
 
-### Writing into the store
+Those three methods are the whole read surface, declared on the `BaseStore` abstract base class that both `Store` and `ApiStore` implement. Anything typed against `BaseStore` works local or remote.
+
+A read-only `Store` deliberately does not open the LevelDB aggregator. plyvel takes an exclusive lock per LevelDB path, so opening it would cap the host at one juditha reader process; leaving it shut is what lets many workers (and a `juditha serve` process) mmap the same index side by side.
+
+## Writing: `get_build_store()` and the `BuildStore` class
 
 ```python
-from juditha import get_store
+from juditha import get_build_store
 from juditha import io
 
-store = get_store()
+store = get_build_store()
 
 # Either: stream FTM entities into the aggregator
 io.load_proxies("entities.ftm.json", store)
@@ -85,16 +90,18 @@ store.aggregator.flush()
 store.build()
 ```
 
-`store.build()` deletes and recreates the tantivy index, then iterates the aggregator once feeding both tantivy and the Aho-Corasick extractor.
+`BuildStore` extends `Store` with the LevelDB aggregator and the tantivy writer, so it can search as well as write. It is local-only: `get_build_store("grpc://...")` raises a `ValueError`. Because it holds the LevelDB handle, `get_build_store` caches one instance per URI, effectively a per-URI singleton.
+
+`store.build()` deletes and recreates the tantivy index, then iterates the aggregator once feeding both tantivy and the Aho-Corasick extractor. It also clears the read-store cache, so a `Store` created earlier in the same process does not keep serving the deleted index.
 
 ### Shutting down
 
-In a long-running worker you do not need to do anything explicit; the cached `Store` lives for the process lifetime.
+In a long-running worker you do not need to do anything explicit; the cached store lives for the process lifetime.
 
-In one-shot scripts or tests that switch URIs, call `store.close()` to flush pending writes, drain tantivy merges, and close the LevelDB handle:
+In one-shot scripts or tests that switch URIs, call `store.close()`. On a `BuildStore` that flushes pending writes, drains tantivy merges and closes the LevelDB handle; on an `ApiStore` it closes the gRPC channel; on a read-only `Store` it does nothing.
 
 ```python
-store = get_store("/tmp/jtest")
+store = get_build_store("/tmp/jtest")
 # ... do work ...
 store.close()
 ```

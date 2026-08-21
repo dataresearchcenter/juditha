@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 from juditha import io
 from juditha.cli import cli
-from juditha.store import get_store, lookup
+from juditha.store import get_build_store, get_store, lookup
 
 runner = CliRunner()
 
@@ -15,8 +15,9 @@ runner = CliRunner()
 def loaded_store(fixtures_path, tmp_path, monkeypatch):
     """Store with EU authorities loaded and built."""
     get_store.cache_clear()
+    get_build_store.cache_clear()
     monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
-    store = get_store()
+    store = get_build_store()
     io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
     store.build()
     return store
@@ -100,6 +101,7 @@ def test_lookup_with_entity(fixtures_path, store):
 def test_juditha_cli(monkeypatch, fixtures_path: Path, tmp_path):
     # Need to clear cache to pick up new env var
     get_store.cache_clear()
+    get_build_store.cache_clear()
     lookup.cache_clear()
     # Set env var
     monkeypatch.setenv("JUDITHA_URI", tmp_path)

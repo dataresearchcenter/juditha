@@ -5,6 +5,11 @@ lint:
 	poetry run flake8 juditha --count --select=E9,F63,F7,F82 --show-source --statistics
 	poetry run flake8 juditha --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+# regenerate the checked-in grpc stubs; run from the repo root so the
+# generated juditha_pb2_grpc.py emits a package-qualified import
+proto:
+	poetry run python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. --pyi_out=. juditha/rpc/juditha.proto
+
 pre-commit:
 	poetry run pre-commit install
 	poetry run pre-commit run -a

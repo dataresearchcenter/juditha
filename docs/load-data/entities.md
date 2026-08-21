@@ -53,10 +53,10 @@ This can pull in gigabytes of data; load times scale linearly with the entity co
 ## From Python
 
 ```python
-from juditha import get_store
+from juditha import get_build_store
 from juditha import io
 
-store = get_store()
+store = get_build_store()
 
 # Pick the shape you have:
 io.load_proxies("entities.ftm.json", store)
@@ -74,9 +74,9 @@ For programmatic ingest you can skip the loaders and push proxies directly:
 
 ```python
 from ftmq.util import make_entity
-from juditha import get_store
+from juditha import get_build_store
 
-store = get_store()
+store = get_build_store()
 entity = make_entity({
     "id": "j",
     "schema": "Person",

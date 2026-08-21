@@ -109,6 +109,58 @@ Default `2` is recall-safe for names whose tokens all clear `MIN_TOKEN_CHARS = 2
 | `2` (default) | Any corpus | Big win on multi-million-cluster corpora: most noise candidates are dropped at the posting-list stage, `percolate_block_limit` rarely binds |
 | `3+` | Long-input batch jobs against multi-token-name corpora where you've measured the cut | Drops names with exactly 2 tokens unless the input shares 3+ tokens with the doc; only use after measuring |
 
+## RPC
+
+These only matter if you serve the store over gRPC, see [Usage / gRPC api](../usage/api.md). `JUDITHA_URI` doubles as the client-side endpoint: set it to `grpc://host:port` and `get_store()` returns an `ApiStore` instead of a local one.
+
+### `JUDITHA_RPC_HOST`
+
+| | |
+| --- | --- |
+| Field | `rpc_host` |
+| Type | `str` |
+| Default | `localhost` |
+| Read at | `juditha serve` startup |
+| Rebuild needed | no |
+
+Bind address for `juditha serve`. The default is deliberately the loopback interface: the api has no authentication, so exposing it further has to be an explicit act. The Docker image sets `0.0.0.0` because the container boundary decides what can reach it.
+
+### `JUDITHA_RPC_PORT`
+
+| | |
+| --- | --- |
+| Field | `rpc_port` |
+| Type | `int` |
+| Default | `50051` |
+| Read at | `juditha serve` startup |
+| Rebuild needed | no |
+
+Bind port for `juditha serve`. `50051` is the gRPC convention. Port `0` binds an ephemeral port, which the startup log line reports.
+
+### `JUDITHA_RPC_WORKERS`
+
+| | |
+| --- | --- |
+| Field | `rpc_workers` |
+| Type | `int` |
+| Default | `10` |
+| Read at | `juditha serve` startup |
+| Rebuild needed | no |
+
+Size of the server's thread pool, which caps concurrent in-flight requests. tantivy searchers and the finalized Aho-Corasick automaton are read-only, so requests need no locking and this can be raised freely. Note that `percolate` is the expensive call: its per-request cost scales with the number of candidates surviving blocking, so on a large corpus the thread pool is what bounds memory.
+
+### `JUDITHA_RPC_MAX_MESSAGE_LENGTH`
+
+| | |
+| --- | --- |
+| Field | `rpc_max_message_length` |
+| Type | `int` |
+| Default | `67108864` (64 MB) |
+| Read at | every channel / server construction |
+| Rebuild needed | no |
+
+Maximum gRPC message size, applied to both send and receive on both ends. gRPC's own default is 4 MB, which `extract` and `percolate` exceed on real documents. Set this on the client as well as the server: a mismatch shows up as `RESOURCE_EXHAUSTED` on whichever side has the lower limit.
+
 ## Debug
 
 ### `JUDITHA_DEBUG`

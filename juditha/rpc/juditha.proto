@@ -1,0 +1,68 @@
+// Wire contract for the juditha read-only store (search / extract / percolate).
+//
+// Mirrors `juditha.model`. Kept flat on purpose: nothing returns a bare `Doc`
+// over the wire, so `Result` carries the `Doc` fields inline instead of
+// nesting. Regenerate the python stubs with `make proto` after editing.
+
+syntax = "proto3";
+
+package juditha.v1;
+
+service Juditha {
+  rpc Search (SearchRequest) returns (SearchResponse);
+  rpc Extract (ExtractRequest) returns (MentionsResponse);
+  rpc Percolate (PercolateRequest) returns (MentionsResponse);
+}
+
+// juditha.model.Result (Doc fields inlined).
+message Result {
+  string key = 1;
+  repeated string names = 2;
+  repeated string aliases = 3;
+  repeated string countries = 4;
+  repeated string schemata = 5;
+  double score = 6;
+  string query = 7;
+  double took = 8;  // milliseconds, measured server-side
+  // Server-computed, output only: these are pydantic `computed_field`
+  // properties on `Result`, so they cannot be passed to its constructor.
+  // Python clients drop them and let pydantic recompute; they exist for
+  // clients in other languages that have no rigour / followthemoney.
+  string common_schema = 9;
+  string caption = 10;  // empty string means `None`
+}
+
+// juditha.model.Mention. The python attribute is `schema_`, the pydantic
+// alias (and therefore the wire name) is `schema`.
+message Mention {
+  string text = 1;
+  uint32 start = 2;
+  uint32 end = 3;
+  string schema = 4;
+}
+
+message SearchRequest {
+  string q = 1;
+  // Absent means "use the server's Settings default".
+  optional double threshold = 2;
+  optional uint32 limit = 3;
+  repeated string schemata = 4;
+}
+
+message SearchResponse {
+  // Absent means no match above the threshold (`Store.search` returned None).
+  optional Result result = 1;
+}
+
+message ExtractRequest {
+  string text = 1;
+}
+
+message PercolateRequest {
+  string text = 1;
+  uint32 slop = 2;
+}
+
+message MentionsResponse {
+  repeated Mention mentions = 1;
+}
