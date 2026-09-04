@@ -43,7 +43,7 @@ pytest-env = "^1.0.1"
 mypy = "^2.3.0"
 zensical = "^0.0.50"
 ipdb = "^0.13.13"
-ipython = "^9.16.1"
+ipython = "^9.17.1"
 grpcio-tools = ">=1.83.0,<2.0.0"
 types-grpcio = "^1.83.0"
 
