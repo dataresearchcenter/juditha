@@ -45,7 +45,7 @@ zensical = "^0.0.50"
 ipdb = "^0.13.13"
 ipython = "^9.16.1"
 grpcio-tools = ">=1.83.0,<2.0.0"
-types-grpcio = "^1.83.0"
+types-grpcio = "^1.84.0"
 
 [build-system]
 requires = ["poetry-core"]
