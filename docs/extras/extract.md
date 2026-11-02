@@ -15,7 +15,7 @@ For variant-tolerant extraction (or for corpora large enough that the automaton 
 ```bash
 echo "The European Parliament met today." > /tmp/doc.txt
 juditha extract -i /tmp/doc.txt
-# {"text":"European Parliament","start":4,"end":23,"schema":"PublicBody"}
+# {"text":"European Parliament","start":4,"end":23,"schema":"PublicBody","topics":[]}
 ```
 
 `-i` reads input from a file / URL / stdin. `-o` writes the mention list to a file / URL / stdout, one JSON object per line.
@@ -39,7 +39,7 @@ for m in mentions:
 # European Council    44 60 PublicBody
 ```
 
-`store.extract` returns `list[Mention]`. `Mention.text` is the original surface form (the slice `text[m.start:m.end]`), `Mention.schema_` is the [FollowTheMoney](https://followthemoney.tech) schema label (use `Mention.schema_` in Python; the JSON surface uses `"schema"` via Pydantic alias).
+`store.extract` returns `list[Mention]`. `Mention.text` is the original surface form (the slice `text[m.start:m.end]`), `Mention.schema_` is the [FollowTheMoney](https://followthemoney.tech) schema label (use `Mention.schema_` in Python; the JSON surface uses `"schema"` via Pydantic alias). `Mention.topics` is the union of the FTM `topics` (`role.pep`, `sanction`, …) of every cluster carrying the matched name, see [Topics](../usage/python.md#topics).
 
 ## How it works
 

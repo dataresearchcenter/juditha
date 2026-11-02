@@ -64,9 +64,12 @@ class AhoExtractor:
         self._patterns: list[str] = []
         # pattern index -> best schema
         self._pattern_schema: list[str] = []
+        # pattern index -> union of FTM topics across the docs carrying it
+        self._pattern_topics: list[tuple[str, ...]] = []
         # Temporary state for incremental building
         self._pattern_docs: dict[str, set[int]] = {}
         self._doc_schemata: list[set[str]] = []
+        self._doc_topics: list[set[str]] = []
 
     def build(self, docs: Iterable[Doc]) -> None:
         """Build the automaton from an iterable of Docs (convenience wrapper)."""
@@ -77,6 +80,7 @@ class AhoExtractor:
     def add_doc(self, idx: int, doc: Doc) -> None:
         """Add a single doc during incremental build."""
         self._doc_schemata.append(doc.schemata)
+        self._doc_topics.append(doc.topics)
         # Derive the per-pattern floor from the shared min_token_length
         # setting on every call. Settings() reads env vars; for build
         # loops the cost is dominated by tokenization anyway.
@@ -95,20 +99,27 @@ class AhoExtractor:
             patterns = sorted(self._pattern_docs)
             log.info("Finalizing extraction patterns ...", patterns=len(patterns))
 
-            # Resolve schema per pattern from collected doc schemata
+            # Resolve schema and topics per pattern from collected doc state.
+            # Schemata reduce to their common ancestor; topics are unioned,
+            # a shared name is flagged if any cluster carrying it is.
             pattern_schema: list[str] = []
+            pattern_topics: list[tuple[str, ...]] = []
             for pattern in patterns:
                 doc_indices = self._pattern_docs[pattern]
                 all_schemata: set[str] = set()
+                all_topics: set[str] = set()
                 for idx in doc_indices:
                     all_schemata.update(self._doc_schemata[idx])
+                    all_topics.update(self._doc_topics[idx])
                 schema = (
                     get_common_schema(*all_schemata) if all_schemata else "LegalEntity"
                 )
                 pattern_schema.append(schema)
+                pattern_topics.append(tuple(sorted(all_topics)))
 
             self._patterns = patterns
             self._pattern_schema = pattern_schema
+            self._pattern_topics = pattern_topics
 
             log.info("Building Aho-Corasick automaton ...", patterns=len(patterns))
             self._ac = _build_automaton(patterns)
@@ -116,12 +127,21 @@ class AhoExtractor:
             # Free temporary build state
             self._pattern_docs = {}
             self._doc_schemata = []
+            self._doc_topics = []
         log.info("Aho-Corasick automaton built.", took=t.took.seconds)
 
     def save(self, path: Path) -> None:
-        """Save patterns and schema mappings as tab-delimited text file."""
+        """Save patterns, schema and topics as a tab-delimited text file.
+
+        One line per pattern: `<pattern>\\t<schema>[\\t<topic>...]`. Topics
+        are optional trailing columns, so a file written before topics
+        existed still loads (with empty topics).
+        """
         content = "".join(
-            f"{p}\t{s}\n" for p, s in zip(self._patterns, self._pattern_schema)
+            "\t".join((p, s, *t)) + "\n"
+            for p, s, t in zip(
+                self._patterns, self._pattern_schema, self._pattern_topics
+            )
         )
         smart_write(str(path), content, mode="w")
 
@@ -134,14 +154,17 @@ class AhoExtractor:
             log.info("Loading Aho-Corasick patterns ...")
             patterns: list[str] = []
             schemas: list[str] = []
+            topics: list[tuple[str, ...]] = []
             for line in smart_stream(str(path), mode="r"):
                 line = line.strip()
                 if "\t" in line:
-                    p, s = line.split("\t", 1)
-                    patterns.append(p)
-                    schemas.append(s)
+                    pattern, schema, *pattern_topics = line.split("\t")
+                    patterns.append(pattern)
+                    schemas.append(schema)
+                    topics.append(tuple(pattern_topics))
             self._patterns = patterns
             self._pattern_schema = schemas
+            self._pattern_topics = topics
             # Wrap patterns with whitespace for token-boundary matching
             self._ac = _build_automaton(patterns)
         log.info(
@@ -222,6 +245,7 @@ class AhoExtractor:
                     start=orig_start,
                     end=orig_end,
                     schema=self._pattern_schema[pattern_idx],
+                    topics=set(self._pattern_topics[pattern_idx]),
                 )
             )
 

@@ -33,6 +33,7 @@ class JudithaServicer(pb_grpc.JudithaServicer):
             threshold=request.threshold if request.HasField("threshold") else None,
             limit=request.limit if request.HasField("limit") else None,
             schemata=list(request.schemata) or None,
+            topics=list(request.topics) or None,
         )
         if result is None:
             # An unset `result` field is how "no match" crosses the wire.

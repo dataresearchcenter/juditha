@@ -15,7 +15,7 @@ The output shape is identical to [`extract`](extract.md): a `list[Mention]` with
 ```bash
 echo "The Jane Doe meeting was at 3pm." > /tmp/doc.txt
 juditha percolate -i /tmp/doc.txt
-# {"text":"Jane Doe","start":4,"end":12,"schema":"LegalEntity"}
+# {"text":"Jane Doe","start":4,"end":12,"schema":"LegalEntity","topics":[]}
 ```
 
 `-i` and `-o` follow the same [anystore](https://docs.investigraph.dev/lib/anystore/) conventions as every other juditha subcommand.
@@ -29,7 +29,7 @@ echo "Jane M. Doe was here." > /tmp/doc.txt
 
 juditha percolate -i /tmp/doc.txt              # no hit
 juditha percolate -i /tmp/doc.txt --slop 1
-# {"text":"Jane M Doe","start":0,"end":11,"schema":"LegalEntity"}
+# {"text":"Jane M Doe","start":0,"end":11,"schema":"LegalEntity","topics":[]}
 ```
 
 The returned `start` / `end` still cover the *entire matched span* in the original text (including any intervening tokens and the punctuation between them), so `text[m.start:m.end]` recovers the raw `"Jane M. Doe"` slice. `m.text`, by contrast, joins just the matched tokens' original-case forms with single spaces, so punctuation the tokenizer stripped (quotes, parens, hyphens at token edges, periods inside initials) does not leak into the surface.

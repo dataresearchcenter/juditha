@@ -14,7 +14,7 @@ One FTM entity per line, newline-delimited JSON:
 {"id": "jane-1", "schema": "Person", "properties": {"name": ["Jane Doe"], "nationality": ["mt"], "alias": ["Jani"]}}
 ```
 
-`juditha` uses `name` and `previousName` as the primary surface forms, `alias` as the secondary set, `countries` and `schemata` as facets, and the entity's caption (or `pick_name`-derived best name) as the cluster anchor.
+`juditha` uses `name` and `previousName` as the primary surface forms, `alias` as the secondary set, `countries` and `schemata` as facets, `topics` (e.g. `role.pep`, `sanction` on [OpenSanctions](https://www.opensanctions.org/datasets/default/) data) as a read-out surfaced on every result and mention, and the entity's caption (or `pick_name`-derived best name) as the cluster anchor.
 
 ## Single file or stream
 
@@ -101,4 +101,4 @@ The aggregator clusters by `name_key` (canonical, order-independent form). To se
 juditha iterate -o docs.jsonl
 ```
 
-Each line is one cluster as JSON, with the union of names, aliases, countries, and schemata that flowed into it from the FTM entities you loaded.
+Each line is one cluster as JSON, with the union of names, aliases, countries, schemata, and topics that flowed into it from the FTM entities you loaded.

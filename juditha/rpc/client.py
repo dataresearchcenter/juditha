@@ -50,8 +50,13 @@ class ApiStore(BaseStore):
         threshold: float | None = None,
         limit: int | None = None,
         schemata: Iterable[str] | None = None,
+        topics: Iterable[str] | None = None,
     ) -> Result | None:
-        request = pb.SearchRequest(q=q, schemata=sorted(schemata) if schemata else None)
+        request = pb.SearchRequest(
+            q=q,
+            schemata=sorted(schemata) if schemata else None,
+            topics=sorted(topics) if topics else None,
+        )
         # Leave the optional fields unset so the server falls back to its own
         # Settings defaults instead of ours.
         if threshold is not None:

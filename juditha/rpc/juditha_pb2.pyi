@@ -7,7 +7,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Result(_message.Message):
-    __slots__ = ("key", "names", "aliases", "countries", "schemata", "score", "query", "took", "common_schema", "caption")
+    __slots__ = ("key", "names", "aliases", "countries", "schemata", "score", "query", "took", "common_schema", "caption", "topics")
     KEY_FIELD_NUMBER: _ClassVar[int]
     NAMES_FIELD_NUMBER: _ClassVar[int]
     ALIASES_FIELD_NUMBER: _ClassVar[int]
@@ -18,6 +18,7 @@ class Result(_message.Message):
     TOOK_FIELD_NUMBER: _ClassVar[int]
     COMMON_SCHEMA_FIELD_NUMBER: _ClassVar[int]
     CAPTION_FIELD_NUMBER: _ClassVar[int]
+    TOPICS_FIELD_NUMBER: _ClassVar[int]
     key: str
     names: _containers.RepeatedScalarFieldContainer[str]
     aliases: _containers.RepeatedScalarFieldContainer[str]
@@ -28,31 +29,36 @@ class Result(_message.Message):
     took: float
     common_schema: str
     caption: str
-    def __init__(self, key: _Optional[str] = ..., names: _Optional[_Iterable[str]] = ..., aliases: _Optional[_Iterable[str]] = ..., countries: _Optional[_Iterable[str]] = ..., schemata: _Optional[_Iterable[str]] = ..., score: _Optional[float] = ..., query: _Optional[str] = ..., took: _Optional[float] = ..., common_schema: _Optional[str] = ..., caption: _Optional[str] = ...) -> None: ...
+    topics: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, key: _Optional[str] = ..., names: _Optional[_Iterable[str]] = ..., aliases: _Optional[_Iterable[str]] = ..., countries: _Optional[_Iterable[str]] = ..., schemata: _Optional[_Iterable[str]] = ..., score: _Optional[float] = ..., query: _Optional[str] = ..., took: _Optional[float] = ..., common_schema: _Optional[str] = ..., caption: _Optional[str] = ..., topics: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Mention(_message.Message):
-    __slots__ = ("text", "start", "end", "schema")
+    __slots__ = ("text", "start", "end", "schema", "topics")
     TEXT_FIELD_NUMBER: _ClassVar[int]
     START_FIELD_NUMBER: _ClassVar[int]
     END_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
+    TOPICS_FIELD_NUMBER: _ClassVar[int]
     text: str
     start: int
     end: int
     schema: str
-    def __init__(self, text: _Optional[str] = ..., start: _Optional[int] = ..., end: _Optional[int] = ..., schema: _Optional[str] = ...) -> None: ...
+    topics: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, text: _Optional[str] = ..., start: _Optional[int] = ..., end: _Optional[int] = ..., schema: _Optional[str] = ..., topics: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SearchRequest(_message.Message):
-    __slots__ = ("q", "threshold", "limit", "schemata")
+    __slots__ = ("q", "threshold", "limit", "schemata", "topics")
     Q_FIELD_NUMBER: _ClassVar[int]
     THRESHOLD_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     SCHEMATA_FIELD_NUMBER: _ClassVar[int]
+    TOPICS_FIELD_NUMBER: _ClassVar[int]
     q: str
     threshold: float
     limit: int
     schemata: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, q: _Optional[str] = ..., threshold: _Optional[float] = ..., limit: _Optional[int] = ..., schemata: _Optional[_Iterable[str]] = ...) -> None: ...
+    topics: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, q: _Optional[str] = ..., threshold: _Optional[float] = ..., limit: _Optional[int] = ..., schemata: _Optional[_Iterable[str]] = ..., topics: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SearchResponse(_message.Message):
     __slots__ = ("result",)

@@ -217,6 +217,7 @@ def percolate(
         doc_names = list(data.get("names", [])) + list(data.get("aliases", []))
         schemata = data.get("schemata", []) or ["LegalEntity"]
         schema_label = get_common_schema(*schemata)
+        topics = set(data.get("topics", []))
 
         for name in doc_names:
             # tokenize_forms is cached — across percolate calls the same
@@ -260,6 +261,7 @@ def percolate(
                         start=orig_start,
                         end=orig_end,
                         schema=schema_label,
+                        topics=topics,
                     )
                 )
     return mentions

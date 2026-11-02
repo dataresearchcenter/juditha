@@ -16,6 +16,7 @@ def to_pb_result(result: Result) -> pb.Result:
         aliases=sorted(result.aliases),
         countries=sorted(result.countries),
         schemata=sorted(result.schemata),
+        topics=sorted(result.topics),
         score=result.score,
         query=result.query,
         took=result.took,
@@ -34,6 +35,7 @@ def from_pb_result(msg: pb.Result) -> Result:
         aliases=set(msg.aliases),
         countries=set(msg.countries),
         schemata=set(msg.schemata),
+        topics=set(msg.topics),
         score=msg.score,
         query=msg.query,
         took=msg.took,
@@ -46,8 +48,15 @@ def to_pb_mention(mention: Mention) -> pb.Mention:
         start=mention.start,
         end=mention.end,
         schema=mention.schema_,
+        topics=sorted(mention.topics),
     )
 
 
 def from_pb_mention(msg: pb.Mention) -> Mention:
-    return Mention(text=msg.text, start=msg.start, end=msg.end, schema=msg.schema)
+    return Mention(
+        text=msg.text,
+        start=msg.start,
+        end=msg.end,
+        schema=msg.schema,
+        topics=set(msg.topics),
+    )

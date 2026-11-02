@@ -30,6 +30,7 @@ message Result {
   // clients in other languages that have no rigour / followthemoney.
   string common_schema = 9;
   string caption = 10;  // empty string means `None`
+  repeated string topics = 11;  // FTM topics, e.g. "role.pep", "sanction"
 }
 
 // juditha.model.Mention. The python attribute is `schema_`, the pydantic
@@ -39,6 +40,7 @@ message Mention {
   uint32 start = 2;
   uint32 end = 3;
   string schema = 4;
+  repeated string topics = 5;
 }
 
 message SearchRequest {
@@ -47,6 +49,7 @@ message SearchRequest {
   optional double threshold = 2;
   optional uint32 limit = 3;
   repeated string schemata = 4;
+  repeated string topics = 5;
 }
 
 message SearchResponse {

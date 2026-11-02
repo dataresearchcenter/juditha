@@ -70,9 +70,25 @@ def cli_lookup(
     threshold: Annotated[
         float, typer.Option(..., help="Fuzzy threshold")
     ] = settings.fuzzy_threshold,
+    schemata: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            "--schemata", help="Only match clusters with any of these FTM schemata"
+        ),
+    ] = None,
+    topics: Annotated[
+        Optional[list[str]],
+        typer.Option("--topics", help="Only match clusters with any of these topics"),
+    ] = None,
 ):
     with ErrorHandler():
-        result = lookup(value, threshold=threshold)
+        # `lookup` is lru_cached, so the narrowing args have to be hashable
+        result = lookup(
+            value,
+            threshold=threshold,
+            schemata=tuple(schemata) if schemata else None,
+            topics=tuple(topics) if topics else None,
+        )
         if result is not None:
             print(result)
         else:
