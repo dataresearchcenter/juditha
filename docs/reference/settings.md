@@ -68,6 +68,32 @@ Per-token length floor for the Aho-Corasick extractor's pattern-length filter, d
 
 The percolator does NOT consult this setting: it uses the hardcoded `MIN_TOKEN_CHARS = 2` floor in `juditha.percolator` symmetrically at index time (the `tokens` field) and query time (the `blocking_set`). Noise above 2 chars is filtered at query time by [`percolate_min_should_match`](#juditha_percolate_min_should_match) instead.
 
+## Load-time tuning
+
+### `JUDITHA_GEONAMES_MIN_ALTERNATE_LENGTH`
+
+| | |
+| --- | --- |
+| Field | `geonames_min_alternate_length` |
+| Type | `int` |
+| Default | `6` |
+| Read at | `juditha load-geonames` |
+| Rebuild needed | reload the dump, then `juditha build` |
+
+Minimum normalized length for name variants taken from the GeoNames `alternatenames` column. Short alternates are where most place false positives come from (Sind → Sindh, Mein → Maine, Kern → Kern County). The canonical `name` and `asciiname` use a fixed floor of 4 and are not affected. Lower toward 4 to match transliterations like "Roma"; raise for stricter, canonical-leaning matching. See [Load data / GeoNames](../load-data/geonames.md).
+
+### `JUDITHA_PATCHES`
+
+| | |
+| --- | --- |
+| Field | `patches` |
+| Type | `str \| None` |
+| Default | `None` |
+| Read at | `Aggregator` creation, i.e. every `load-*` command |
+| Rebuild needed | reload the data, then `juditha build` |
+
+Uri of a YAML file of [datapatch](https://github.com/opensanctions/datapatch) lookups applied to every entity while loading, for example to turn a mislabelled `Company` into a `PublicBody`. Unset means no patching. See [Load data / Patches](../load-data/patches.md).
+
 ## Query-time tuning
 
 ### `JUDITHA_PERCOLATE_BLOCK_LIMIT`
@@ -181,5 +207,5 @@ Some thresholds live as module-level constants in `juditha.percolator` and `judi
 
 | Constant | Module | Value | Purpose |
 | --- | --- | ---: | --- |
-| `MIN_TOKEN_COUNT` | `juditha.percolator`, `juditha.extraction` | `2` | Single-token names are always skipped (too noisy as both Aho patterns and phrase-query candidates). Same value, declared in two places to keep modules independent. |
+| `MIN_TOKEN_COUNT` | `juditha.percolator`, `juditha.extraction` | `2` | Single-token names are skipped (too noisy as both Aho patterns and phrase-query candidates). Same value, declared in two places to keep modules independent. The extractor exempts clusters carrying the `Address` schema (places from [GeoNames](../load-data/geonames.md)); the percolator does not. |
 | `NUM_CPU` | `juditha.store` | `multiprocessing.cpu_count()` | Sizes the tantivy writer's heap × num_threads at build time. |

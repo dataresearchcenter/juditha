@@ -125,3 +125,59 @@ def test_extractor_save_load(extractor, tmp_path):
         assert a.start == b.start
         assert a.end == b.end
         assert a.schema_ == b.schema_
+
+
+def test_extract_single_token_address_included(tmp_path):
+    """Docs carrying the Address schema get a single-token pattern floor."""
+    from ftmq.util import make_entity
+
+    aggregator = Aggregator(tmp_path / "address.db")
+    aggregator.load_entities(
+        [
+            make_entity(
+                {
+                    "id": "GEO:2950159",
+                    "schema": "Address",
+                    "properties": {"name": ["Berlin"], "country": ["de"]},
+                }
+            ),
+            make_entity(
+                {
+                    "id": "person-1",
+                    "schema": "Person",
+                    "properties": {"name": ["Britta"]},
+                }
+            ),
+        ]
+    )
+    ext = AhoExtractor()
+    ext.build(aggregator)
+    (m,) = ext.extract("Britta lives in Berlin.")
+    assert m.text == "Berlin"
+    assert m.schema_ == "Address"
+    # still bound by the per-token length floor (4 chars by default)
+    aggregator = Aggregator(tmp_path / "short.db")
+    aggregator.load_entities(
+        [
+            make_entity(
+                {
+                    "id": "GEO:1",
+                    "schema": "Address",
+                    "properties": {"name": ["Ulm"]},
+                }
+            )
+        ]
+    )
+    ext = AhoExtractor()
+    ext.build(aggregator)
+    assert ext.extract("Ulm is small.") == []
+
+
+def test_extract_adjacent_names(extractor):
+    """Two names back to back both match: the first match must not consume
+    the token boundary the second one starts on."""
+    text = "European Parliament European Council met."
+    mentions = extractor.extract(text)
+    assert [m.text for m in mentions] == ["European Parliament", "European Council"]
+    assert mentions[0].end < mentions[1].start
+    assert text[mentions[1].start : mentions[1].end] == "European Council"

@@ -30,7 +30,14 @@ log = get_logger(__name__)
 # the same notion of "too-short token". The floor is computed as
 # `min_token_length * MIN_TOKEN_COUNT` (default 4 × 2 = 8, matching the
 # historic `MIN_PATTERN_LENGTH`).
+#
+# Docs carrying the `Address` schema (places, e.g. from `load-geonames`)
+# are exempt from the token-count floor: "Berlin", "Paris" or "Iran" must
+# be extractable, so their floor is a single token of `min_token_length`
+# characters. Noise control for places happens in the geonames loader
+# (population and length floors), not here.
 MIN_TOKEN_COUNT = 2
+ADDRESS_SCHEMA = "Address"
 
 
 def _normalize_for_extraction(name: str) -> str:
@@ -43,13 +50,23 @@ def _normalize_for_extraction(name: str) -> str:
     return " ".join(t.form for t in tokens)
 
 
+# Token separator in the matched text and inside the automaton patterns.
+# Two spaces, not one: a pattern is wrapped as " berlin ", so its trailing
+# space is the first of the pair and the next pattern's leading space the
+# second. With a single space the first match would consume the only
+# boundary and the adjacent name ("Berlin Hamburg", "Berlin, Hamburg,
+# Kiel") could never start, since leftmost-longest matches don't overlap.
+TOKEN_SEP = "  "
+
+
 def _build_automaton(patterns: list[str]) -> ahocorasick_rs.AhoCorasick:
     """Build Aho-Corasick automaton with whitespace-wrapped patterns.
 
     Each pattern is wrapped with leading/trailing space so that the
-    automaton only matches at token boundaries in whitespace-padded text.
+    automaton only matches at token boundaries in whitespace-padded text;
+    its inner single spaces become `TOKEN_SEP` to line up with the text.
     """
-    wrapped = [f" {p} " for p in patterns]
+    wrapped = [f" {p.replace(' ', TOKEN_SEP)} " for p in patterns]
     return ahocorasick_rs.AhoCorasick(
         wrapped,
         matchkind=ahocorasick_rs.MATCHKIND_LEFTMOST_LONGEST,
@@ -84,11 +101,12 @@ class AhoExtractor:
         # Derive the per-pattern floor from the shared min_token_length
         # setting on every call. Settings() reads env vars; for build
         # loops the cost is dominated by tokenization anyway.
-        min_pattern_length = Settings().min_token_length * MIN_TOKEN_COUNT
+        min_tokens = 1 if ADDRESS_SCHEMA in doc.schemata else MIN_TOKEN_COUNT
+        min_pattern_length = Settings().min_token_length * min_tokens
         for name in doc.names | doc.aliases:
             norm = _normalize_for_extraction(name)
             tokens = norm.split()
-            if len(tokens) >= MIN_TOKEN_COUNT and len(norm) >= min_pattern_length:
+            if len(tokens) >= min_tokens and len(norm) >= min_pattern_length:
                 if norm not in self._pattern_docs:
                     self._pattern_docs[norm] = set()
                 self._pattern_docs[norm].add(idx)
@@ -184,17 +202,17 @@ class AhoExtractor:
         if not tokens:
             return []
 
-        # Build normalized text from tokens (space-joined forms)
+        # Build normalized text from tokens (TOKEN_SEP-joined forms)
         # Pad with leading/trailing space so automaton patterns
         # (which are wrapped as " pattern ") match at text boundaries
-        norm_text = " " + " ".join(t.form for t in tokens) + " "
+        norm_text = " " + TOKEN_SEP.join(t.form for t in tokens) + " "
 
         # Build char-to-token mapping for the padded text
         # Position 0 is the leading space
         char_to_token: list[int] = [-1]  # leading space
         for i, tok in enumerate(tokens):
             if i > 0:
-                char_to_token.append(-1)  # inter-token space
+                char_to_token.extend([-1] * len(TOKEN_SEP))  # inter-token gap
             for _ in tok.form:
                 char_to_token.append(i)
         char_to_token.append(-1)  # trailing space

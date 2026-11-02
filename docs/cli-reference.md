@@ -76,6 +76,20 @@ juditha load-catalog [OPTIONS]
 
 Does not build the index. Run `juditha build` afterwards.
 
+## load-geonames
+
+Ingest places from a [GeoNames](https://www.geonames.org/) dump as `Address` entities. Needs the `geonames` extra (`pip install "juditha[geonames]"`). See [Load data / GeoNames](load-data/geonames.md) for the row and name filters.
+
+```text
+juditha load-geonames [OPTIONS]
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `-i` | `https://download.geonames.org/export/dump/allCountries.zip` | Dump URI: `allCountries.zip`, a per-country zip such as `DE.zip`, or the unpacked `.txt`. |
+
+Does not build the index. Run `juditha build` afterwards.
+
 ## build
 
 Rebuild the tantivy index and the Aho-Corasick extractor from the aggregator. Deletes the existing index directory first; safe to rerun.

@@ -18,7 +18,7 @@ The implementation uses a pre-populated names database and index. Data is either
 ## What you can do with it
 
 - Validate and canonicalise NER spans against a known-name corpus ([Quickstart](quickstart.md), [Usage](usage/python.md)).
-- Load names from a flat list, [FollowTheMoney](https://followthemoney.tech) entities, or a [nomenklatura](https://github.com/opensanctions/nomenklatura) dataset / catalog ([Load data](load-data/names.md)).
+- Load names from a flat list, [FollowTheMoney](https://followthemoney.tech) entities, a [nomenklatura](https://github.com/opensanctions/nomenklatura) dataset / catalog ([Load data](load-data/names.md)), or places from a [GeoNames](load-data/geonames.md) dump.
 - Extract every known-name mention from a fulltext document, either via an [Aho-Corasick automaton](extras/extract.md) or via [percolation](extras/percolate.md) (reverse search of the names index).
 - Serve one built corpus to many workers over [gRPC](usage/api.md) instead of giving each its own copy.
 

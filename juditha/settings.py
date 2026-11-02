@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     # "A Lee") silently miss at MSM=2 since only "lee" survives the
     # MIN_TOKEN_CHARS floor – that's accepted noise-vs-recall trade.
     percolate_min_should_match: int = 2
+    # `load-geonames`: minimum normalized length for name variants taken
+    # from the GeoNames `alternatenames` column. Short alternates are where
+    # most place false positives come from (Sind→Sindh, Mein→Maine, Kern→
+    # Kern County). Canonical `name` / `asciiname` use a fixed floor of 4.
+    # Only affects loading; reload + `juditha build` to apply.
+    geonames_min_alternate_length: int = 6
+    # Uri of a YAML file of datapatch lookups applied to every entity while
+    # loading (`Aggregator.put`), e.g. to fix a schema. See `juditha.patch`.
+    patches: str | None = None
     # Bind address for `juditha serve`. Defaults to localhost, not
     # 0.0.0.0: the gRPC api has no authentication, so exposing it beyond
     # the loopback interface has to be a deliberate act.

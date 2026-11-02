@@ -26,10 +26,14 @@ dependencies = [
     "tantivy (>=0.27.0,<0.28.0)",
     "grpcio (>=1.85.1,<2.0.0)",
     "protobuf (>=7.36.2,<8.0.0)",
+    "datapatch (>=1.2.4,<2.0.0)",
 ]
 
 [project.scripts]
 juditha = "juditha.cli:cli"
+
+[project.optional-dependencies]
+geonames = ["wordfreq (>=3.1.1,<4.0.0)"]
 
 [tool.poetry.group.dev.dependencies]
 black = "^26.5.1"
@@ -46,6 +50,7 @@ ipdb = "^0.13.13"
 ipython = "^9.16.1"
 grpcio-tools = ">=1.83.0,<2.0.0"
 types-grpcio = "^1.83.0"
+types-pyyaml = "^6.0.12.20261030"
 
 [build-system]
 requires = ["poetry-core"]

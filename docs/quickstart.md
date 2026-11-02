@@ -8,6 +8,7 @@ Five-minute walkthrough: install, populate a tiny corpus, build the index, run a
 
 ```bash
 pip install juditha
+pip install "juditha[geonames]"   # if you want to load places from GeoNames
 ```
 
 You can verify the install with `juditha --version`.
@@ -95,7 +96,7 @@ Everything read-only (`lookup`, `extract`, `percolate`) then goes over the wire 
 
 ## Next
 
-- Load real data: [Names](load-data/names.md), [Entities](load-data/entities.md).
+- Load real data: [Names](load-data/names.md), [Entities](load-data/entities.md), [GeoNames](load-data/geonames.md).
 - Drive it from a shell pipeline: [Usage / CLI](usage/cli.md), [CLI reference](cli-reference.md).
 - Embed in a worker: [Usage / Python](usage/python.md).
 - Share one corpus across workers: [Usage / gRPC api](usage/api.md).
