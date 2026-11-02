@@ -1,0 +1,4 @@
+{"id": "pep-1", "schema": "Person", "properties": {"name": ["Jane Doe Example"], "alias": ["Janie Example"], "nationality": ["mt"], "topics": ["role.pep"]}}
+{"id": "pep-1-sanctioned", "schema": "Person", "properties": {"name": ["Jane Doe Example"], "topics": ["sanction"]}}
+{"id": "corp-1", "schema": "Company", "properties": {"name": ["Offshore Holdings Example"], "jurisdiction": ["vg"], "topics": ["corp.offshore"]}}
+{"id": "plain-1", "schema": "Organization", "properties": {"name": ["Plain Organisation Example"]}}
