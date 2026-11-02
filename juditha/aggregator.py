@@ -38,6 +38,7 @@ def unpack_entity(e: EntityProxy) -> dict | None:
                 "names": names,
                 "aliases": set(e.get("alias")),
                 "countries": set(e.countries),
+                "topics": set(e.get("topics")),
             }
 
 
@@ -49,6 +50,7 @@ class Aggregator:
         _d_\\x00<name_key>\\x00<schema>\\x00name\\x00<original_name>
         _d_\\x00<name_key>\\x00<schema>\\x00alias\\x00<original_alias>
         _d_\\x00<name_key>\\x00<schema>\\x00country\\x00<country_code>
+        _d_\\x00<name_key>\\x00<schema>\\x00topic\\x00<topic>
 
     Benefits:
     - Automatic deduplication via LevelDB key overwriting
@@ -94,6 +96,10 @@ class Aggregator:
                     )
                     db.put(key, self.EMPTY)
 
+                for topic in row["topics"]:
+                    key = self.make_key(self.PREFIX, norm_key, schema, "topic", topic)
+                    db.put(key, self.EMPTY)
+
         self.buffer = []
 
     def put(self, entity: EntityProxy) -> None:
@@ -116,6 +122,7 @@ class Aggregator:
         names_: set[str] = set()
         aliases_: set[str] = set()
         countries_: set[str] = set()
+        topics_: set[str] = set()
 
         # Build prefix for iteration
         if norm_key:
@@ -150,24 +157,28 @@ class Aggregator:
                     aliases=aliases_,
                     countries=countries_,
                     schemata=schemata,
+                    topics=topics_,
                 )
                 # Reset for new norm group
                 current_key = norm
                 names_ = set()
                 aliases_ = set()
                 countries_ = set()
+                topics_ = set()
                 schemata = set()
 
             # Accumulate data for current norm
             schemata.add(schema)
 
-            # Add name, alias, or country based on type
+            # Add name, alias, country or topic based on type
             if entry_type == "name":
                 names_.add(entry_value)
             elif entry_type == "alias":
                 aliases_.add(entry_value)
             elif entry_type == "country":
                 countries_.add(entry_value)
+            elif entry_type == "topic":
+                topics_.add(entry_value)
 
         # Don't forget the last (or only) one
         if current_key:
@@ -177,6 +188,7 @@ class Aggregator:
                 aliases=aliases_,
                 countries=countries_,
                 schemata=schemata,
+                topics=topics_,
             )
 
     def load_entities(self, entities: Iterable[EntityProxy]) -> None:

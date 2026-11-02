@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19juditha/rpc/juditha.proto\x12\njuditha.v1\"\xae\x01\n\x06Result\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05names\x18\x02 \x03(\t\x12\x0f\n\x07\x61liases\x18\x03 \x03(\t\x12\x11\n\tcountries\x18\x04 \x03(\t\x12\x10\n\x08schemata\x18\x05 \x03(\t\x12\r\n\x05score\x18\x06 \x01(\x01\x12\r\n\x05query\x18\x07 \x01(\t\x12\x0c\n\x04took\x18\x08 \x01(\x01\x12\x15\n\rcommon_schema\x18\t \x01(\t\x12\x0f\n\x07\x63\x61ption\x18\n \x01(\t\"C\n\x07Mention\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05start\x18\x02 \x01(\r\x12\x0b\n\x03\x65nd\x18\x03 \x01(\r\x12\x0e\n\x06schema\x18\x04 \x01(\t\"p\n\rSearchRequest\x12\t\n\x01q\x18\x01 \x01(\t\x12\x16\n\tthreshold\x18\x02 \x01(\x01H\x00\x88\x01\x01\x12\x12\n\x05limit\x18\x03 \x01(\rH\x01\x88\x01\x01\x12\x10\n\x08schemata\x18\x04 \x03(\tB\x0c\n\n_thresholdB\x08\n\x06_limit\"D\n\x0eSearchResponse\x12\'\n\x06result\x18\x01 \x01(\x0b\x32\x12.juditha.v1.ResultH\x00\x88\x01\x01\x42\t\n\x07_result\"\x1e\n\x0e\x45xtractRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\".\n\x10PercolateRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x0c\n\x04slop\x18\x02 \x01(\r\"9\n\x10MentionsResponse\x12%\n\x08mentions\x18\x01 \x03(\x0b\x32\x13.juditha.v1.Mention2\xd8\x01\n\x07Juditha\x12?\n\x06Search\x12\x19.juditha.v1.SearchRequest\x1a\x1a.juditha.v1.SearchResponse\x12\x43\n\x07\x45xtract\x12\x1a.juditha.v1.ExtractRequest\x1a\x1c.juditha.v1.MentionsResponse\x12G\n\tPercolate\x12\x1c.juditha.v1.PercolateRequest\x1a\x1c.juditha.v1.MentionsResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19juditha/rpc/juditha.proto\x12\njuditha.v1\"\xbe\x01\n\x06Result\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05names\x18\x02 \x03(\t\x12\x0f\n\x07\x61liases\x18\x03 \x03(\t\x12\x11\n\tcountries\x18\x04 \x03(\t\x12\x10\n\x08schemata\x18\x05 \x03(\t\x12\r\n\x05score\x18\x06 \x01(\x01\x12\r\n\x05query\x18\x07 \x01(\t\x12\x0c\n\x04took\x18\x08 \x01(\x01\x12\x15\n\rcommon_schema\x18\t \x01(\t\x12\x0f\n\x07\x63\x61ption\x18\n \x01(\t\x12\x0e\n\x06topics\x18\x0b \x03(\t\"S\n\x07Mention\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05start\x18\x02 \x01(\r\x12\x0b\n\x03\x65nd\x18\x03 \x01(\r\x12\x0e\n\x06schema\x18\x04 \x01(\t\x12\x0e\n\x06topics\x18\x05 \x03(\t\"\x80\x01\n\rSearchRequest\x12\t\n\x01q\x18\x01 \x01(\t\x12\x16\n\tthreshold\x18\x02 \x01(\x01H\x00\x88\x01\x01\x12\x12\n\x05limit\x18\x03 \x01(\rH\x01\x88\x01\x01\x12\x10\n\x08schemata\x18\x04 \x03(\t\x12\x0e\n\x06topics\x18\x05 \x03(\tB\x0c\n\n_thresholdB\x08\n\x06_limit\"D\n\x0eSearchResponse\x12\'\n\x06result\x18\x01 \x01(\x0b\x32\x12.juditha.v1.ResultH\x00\x88\x01\x01\x42\t\n\x07_result\"\x1e\n\x0e\x45xtractRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\".\n\x10PercolateRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x0c\n\x04slop\x18\x02 \x01(\r\"9\n\x10MentionsResponse\x12%\n\x08mentions\x18\x01 \x03(\x0b\x32\x13.juditha.v1.Mention2\xd8\x01\n\x07Juditha\x12?\n\x06Search\x12\x19.juditha.v1.SearchRequest\x1a\x1a.juditha.v1.SearchResponse\x12\x43\n\x07\x45xtract\x12\x1a.juditha.v1.ExtractRequest\x1a\x1c.juditha.v1.MentionsResponse\x12G\n\tPercolate\x12\x1c.juditha.v1.PercolateRequest\x1a\x1c.juditha.v1.MentionsResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,19 +32,19 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'juditha.rpc.juditha_pb2', _
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_RESULT']._serialized_start=42
-  _globals['_RESULT']._serialized_end=216
-  _globals['_MENTION']._serialized_start=218
-  _globals['_MENTION']._serialized_end=285
-  _globals['_SEARCHREQUEST']._serialized_start=287
-  _globals['_SEARCHREQUEST']._serialized_end=399
-  _globals['_SEARCHRESPONSE']._serialized_start=401
-  _globals['_SEARCHRESPONSE']._serialized_end=469
-  _globals['_EXTRACTREQUEST']._serialized_start=471
-  _globals['_EXTRACTREQUEST']._serialized_end=501
-  _globals['_PERCOLATEREQUEST']._serialized_start=503
-  _globals['_PERCOLATEREQUEST']._serialized_end=549
-  _globals['_MENTIONSRESPONSE']._serialized_start=551
-  _globals['_MENTIONSRESPONSE']._serialized_end=608
-  _globals['_JUDITHA']._serialized_start=611
-  _globals['_JUDITHA']._serialized_end=827
+  _globals['_RESULT']._serialized_end=232
+  _globals['_MENTION']._serialized_start=234
+  _globals['_MENTION']._serialized_end=317
+  _globals['_SEARCHREQUEST']._serialized_start=320
+  _globals['_SEARCHREQUEST']._serialized_end=448
+  _globals['_SEARCHRESPONSE']._serialized_start=450
+  _globals['_SEARCHRESPONSE']._serialized_end=518
+  _globals['_EXTRACTREQUEST']._serialized_start=520
+  _globals['_EXTRACTREQUEST']._serialized_end=550
+  _globals['_PERCOLATEREQUEST']._serialized_start=552
+  _globals['_PERCOLATEREQUEST']._serialized_end=598
+  _globals['_MENTIONSRESPONSE']._serialized_start=600
+  _globals['_MENTIONSRESPONSE']._serialized_end=657
+  _globals['_JUDITHA']._serialized_start=660
+  _globals['_JUDITHA']._serialized_end=876
 # @@protoc_insertion_point(module_scope)

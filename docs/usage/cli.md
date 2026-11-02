@@ -23,6 +23,7 @@ juditha build
 
 # Query
 juditha lookup "European Parliament"
+juditha lookup "Jane Doe" --schemata Person --topics role.pep   # narrowing, repeatable
 juditha extract   -i document.txt
 juditha percolate -i document.txt
 ```

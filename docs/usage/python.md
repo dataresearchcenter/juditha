@@ -22,6 +22,7 @@ res = lookup(
     threshold=0.95,           # optional, defaults to settings.fuzzy_threshold
     uri=None,                 # optional, defaults to settings.uri
     schemata=("Person",),     # optional FollowTheMoney schema narrowing, must be a tuple
+    topics=("role.pep",),     # optional FollowTheMoney topics narrowing, must be a tuple
 )
 ```
 
@@ -35,6 +36,7 @@ res.names          # {"Jane Doe"}
 res.aliases        # set of alternate surface forms
 res.countries      # ISO country codes derived from the FTM entity
 res.schemata       # FTM schemata that contributed to this cluster
+res.topics         # FTM topics unioned over the cluster, e.g. {"role.pep", "sanction"}
 res.score          # similarity in [0, 1]
 res.caption        # human-readable display name
 res.common_schema  # e.g. "Person", "Organization", "LegalEntity"
@@ -56,7 +58,7 @@ The methods you will use most:
 
 ```python
 # Best-match search, same engine as juditha.lookup
-result = store.search(query, threshold=None, limit=None, schemata=None)
+result = store.search(query, threshold=None, limit=None, schemata=None, topics=None)
 
 # Aho-Corasick extraction over fulltext
 mentions = store.extract("Some text mentioning Jane Doe.")
@@ -114,10 +116,14 @@ store.close()
 from juditha.model import Doc, Result, Mention
 ```
 
-- `Doc(key, names, aliases, countries, schemata, score)` – an aggregated cluster.
+- `Doc(key, names, aliases, countries, schemata, topics, score)` – an aggregated cluster.
 - `Result(Doc, query, took, common_schema, caption)` – a search hit.
-- `Mention(text, start, end, schema_)` – a span extracted from a fulltext. The Python attribute is `schema_` (the JSON field is `schema`; see the [Pydantic alias note](#pydantic-alias-on-mention)).
+- `Mention(text, start, end, schema_, topics)` – a span extracted from a fulltext. The Python attribute is `schema_` (the JSON field is `schema`; see the [Pydantic alias note](#pydantic-alias-on-mention)).
 
 ### Pydantic alias on `Mention`
 
 `Mention.schema_` carries the FTM-style schema label of the matched name. The Python attribute is `schema_` because `BaseModel.schema` is reserved. The JSON surface uses `"schema"` via a Pydantic alias, so `mention.model_dump_json()` produces `{"text": "...", "start": ..., "end": ..., "schema": "..."}`. Both `Mention(schema="Person")` and `Mention(schema_="Person")` work on the constructor side.
+
+### Topics
+
+`Doc.topics`, `Result.topics` and `Mention.topics` carry the [FollowTheMoney `topics`](https://followthemoney.tech/explorer/types/topic/) of the loaded entities (`role.pep`, `sanction`, `crime`, `corp.offshore`, …), as found on e.g. [OpenSanctions](https://www.opensanctions.org/datasets/default/) exports. Topics are unioned: a cluster carries every topic of every entity that flowed into it, and an extracted `Mention` carries every topic of every cluster that holds the matched name. The set is empty for data loaded without topics (plain name lists). `lookup(..., topics=("role.pep", "sanction"))` and `store.search(..., topics=...)` narrow to clusters carrying any of the given topics, the same way `schemata` does.

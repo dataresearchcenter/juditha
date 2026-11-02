@@ -31,6 +31,9 @@ class Doc(BaseModel):
     aliases: set[str] = set()
     countries: set[str] = set()
     schemata: set[str] = set()
+    # FTM `topics` (e.g. "role.pep", "sanction", "crime") unioned over
+    # every entity that flowed into this cluster.
+    topics: set[str] = set()
     score: float = 0
 
 
@@ -74,3 +77,5 @@ class Mention(BaseModel):
     start: int
     end: int
     schema_: str = Field(alias="schema")
+    # Union of the FTM `topics` of every cluster that carries the matched name.
+    topics: set[str] = set()

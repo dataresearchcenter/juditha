@@ -98,6 +98,8 @@ juditha lookup [OPTIONS] VALUE
 | --- | --- | --- |
 | `VALUE` | (required) | The query string. |
 | `--threshold` | `0.97` | Minimum Jaro similarity for a match. Lower it for noisier inputs. |
+| `--schemata` | (none) | Only match clusters carrying any of these FTM schemata. Repeat for several: `--schemata Person --schemata Company`. |
+| `--topics` | (none) | Only match clusters carrying any of these FTM topics, e.g. `--topics role.pep --topics sanction`. |
 
 Prints the `Result` (rich-formatted) on a hit, `not found` otherwise.
 

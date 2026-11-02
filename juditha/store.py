@@ -14,6 +14,7 @@ Query shape (per refactor plan):
       [must: symbols ⊇ extracted_symbols]
       [must: qid = qid_hint]
       [must: schemata ∈ requested_schemata]
+      [must: topics ∈ requested_topics]
 
 Rerank: tantivy returns top-K → jaro on hit.key → rapidfuzz fallback over
 hit.names. Phonetic-only hits that are semantically wrong get filtered by
@@ -71,6 +72,9 @@ def make_schema() -> tantivy.Schema:
     # narrowing / pushdown filters
     b.add_text_field("schemata", tokenizer_name="raw", stored=True)
     b.add_text_field("countries", tokenizer_name="raw", stored=True)
+    # FTM topics (role.pep, sanction, …); stored so search / percolate can
+    # surface them, not used for narrowing
+    b.add_text_field("topics", tokenizer_name="raw", stored=True)
     b.add_text_field("qid", tokenizer_name="raw", stored=True)
     b.add_text_field("symbols", tokenizer_name="raw", stored=True)
     # phonetic blocking for names unreachable by fuzzy distance 2;
@@ -146,6 +150,7 @@ def build_query(
     symbols: set[str] | None = None,
     qid_hint: str | None = None,
     schemata: set[str] | None = None,
+    topics: set[str] | None = None,
     phonetic_codes: Iterable[str] | None = None,
 ) -> tantivy.Query:
     """Build the BooleanQuery per the refactor plan."""
@@ -190,6 +195,12 @@ def build_query(
         )
         clauses.append((Occur.Must, sch))
 
+    if topics:
+        top = Q.boolean_query(
+            [(Occur.Should, Q.term_query(schema, "topics", t)) for t in topics]
+        )
+        clauses.append((Occur.Must, top))
+
     return Q.boolean_query(clauses)
 
 
@@ -211,8 +222,13 @@ class BaseStore(ABC):
         threshold: float | None = None,
         limit: int | None = None,
         schemata: Iterable[str] | None = None,
+        topics: Iterable[str] | None = None,
     ) -> Result | None:
-        """Best canonical match for `q`, or None below `threshold`."""
+        """Best canonical match for `q`, or None below `threshold`.
+
+        `schemata` / `topics` narrow to clusters carrying any of the given
+        values.
+        """
 
     @abstractmethod
     def extract(self, text: str) -> list[Mention]:
@@ -268,6 +284,7 @@ class Store(BaseStore):
         threshold: float | None = None,
         limit: int | None = None,
         schemata: Iterable[str] | None = None,
+        topics: Iterable[str] | None = None,
     ) -> Result | None:
         t0 = time.perf_counter()
         threshold = threshold if threshold is not None else settings.fuzzy_threshold
@@ -277,11 +294,13 @@ class Store(BaseStore):
             return None
 
         schemata_set = set(schemata) if schemata else None
+        topics_set = set(topics) if topics else None
         phon_codes = _phonetic_codes(q)
         query = build_query(
             self._schema,
             clean_q,
             schemata=schemata_set,
+            topics=topics_set,
             phonetic_codes=phon_codes,
         )
 
@@ -298,6 +317,7 @@ class Store(BaseStore):
                 aliases=set(data.get("aliases", [])),
                 countries=set(data.get("countries", [])),
                 schemata=set(data.get("schemata", [])),
+                topics=set(data.get("topics", [])),
             )
             score = jellyfish.jaro_similarity(clean_q, doc.key)
             if score > threshold:
@@ -388,6 +408,7 @@ class BuildStore(Store):
             "aliases": sorted(doc.aliases),
             "schemata": sorted(doc.schemata),
             "countries": sorted(doc.countries),
+            "topics": sorted(doc.topics),
             "qid": sorted(qids),
             "symbols": sorted(symbols),
             "phonetic": sorted(phonetic),
@@ -532,6 +553,12 @@ def lookup(
     threshold: float | None = None,
     uri: Uri | None = None,
     schemata: tuple[str, ...] | None = None,
+    topics: tuple[str, ...] | None = None,
 ) -> Result | None:
     store = get_store(uri) if uri is not None else get_store()
-    return store.search(q, threshold, schemata=set(schemata) if schemata else None)
+    return store.search(
+        q,
+        threshold,
+        schemata=set(schemata) if schemata else None,
+        topics=set(topics) if topics else None,
+    )

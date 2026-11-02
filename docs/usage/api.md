@@ -82,5 +82,6 @@ Notes for clients in other languages:
 - `Result.common_schema` and `Result.caption` are computed by the server. The python client ignores them and recomputes locally via [rigour](https://github.com/opensanctions/rigour) and [followthemoney](https://followthemoney.tech); other clients can use them as-is. An empty `caption` means there was no name to pick.
 - `Result.took` is measured server-side in milliseconds and does not include network time.
 - `Mention.schema` matches the JSON field name of `juditha.model.Mention` (the python attribute is `schema_`).
+- `Result.topics` and `Mention.topics` are the FTM topics of the matched cluster(s), empty when the loaded data had none. `SearchRequest.topics` narrows like `SearchRequest.schemata`: any of the given values.
 
 Message size limits are raised from gRPC's 4 MB default to 64 MB on both ends, because `extract` and `percolate` take whole documents. Tune with `JUDITHA_RPC_MAX_MESSAGE_LENGTH`, and set it on the client too.
