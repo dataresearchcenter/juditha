@@ -17,6 +17,7 @@ load-* (any number of times)  ->  build  ->  lookup / extract / percolate
 juditha load-names    -i names.txt
 juditha load-entities -i entities.ftm.json
 juditha load-dataset  -i https://data.ftm.store/eu_authorities/index.json
+juditha load-geonames -i DE.zip
 
 # Materialise
 juditha build

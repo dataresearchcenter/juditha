@@ -29,17 +29,24 @@ def unpack_entity(e: EntityProxy) -> dict | None:
     caption = e.caption
     if caption in model.schemata:
         caption = pick_name(list(names))
-    if caption is not None and caption not in model.schemata and len(caption) > 5:
-        key = n(caption)
-        if key:
-            return {
-                "key": key,
-                "schema": e.schema.name,
-                "names": names,
-                "aliases": set(e.get("alias")),
-                "countries": set(e.countries),
-                "topics": set(e.get("topics")),
-            }
+    if caption is None or caption in model.schemata:
+        return None
+    # Short captions are noise for legal entities ("EU", "ag"). Places are
+    # different: "Rome", "Iran", "Bonn" are real lookups, and the geonames
+    # loader already applies its own length floors, so `Address` skips it.
+    if len(caption) <= 5 and e.schema.name != "Address":
+        return None
+    key = n(caption)
+    if key:
+        return {
+            "key": key,
+            "schema": e.schema.name,
+            "names": names,
+            "aliases": set(e.get("alias")),
+            "countries": set(e.countries),
+            "topics": set(e.get("topics")),
+        }
+    return None
 
 
 class Aggregator:

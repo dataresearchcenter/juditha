@@ -6,7 +6,7 @@ from anystore.io import smart_read, smart_write_models
 from anystore.logging import configure_logging
 from rich import print
 
-from juditha import __version__, io
+from juditha import __version__, geonames, io
 from juditha.rpc.server import serve
 from juditha.settings import Settings
 from juditha.store import get_build_store, get_store, lookup
@@ -36,14 +36,30 @@ def cli_juditha(
 def cli_load_entities(
     uri: Annotated[str, typer.Option("-i", help="Input uri, default stdin")] = "-",
 ):
+    """Load FollowTheMoney entities (newline-delimited JSON)."""
     with ErrorHandler():
         io.load_proxies(uri)
+
+
+@cli.command("load-geonames")
+def cli_load_geonames(
+    uri: Annotated[
+        str,
+        typer.Option(
+            "-i", help="GeoNames dump uri: allCountries.zip, a country zip or .txt"
+        ),
+    ] = geonames.GEONAMES_DUMP_URI,
+):
+    """Load places from a GeoNames dump as `Address` entities."""
+    with ErrorHandler():
+        io.load_geonames(uri)
 
 
 @cli.command("load-names")
 def cli_load_names(
     uri: Annotated[str, typer.Option("-i", help="Input uri, default stdin")] = "-",
 ):
+    """Load a plain list of names, one per line."""
     with ErrorHandler():
         io.load_names(uri)
 
@@ -52,6 +68,7 @@ def cli_load_names(
 def cli_load_dataset(
     uri: Annotated[str, typer.Option("-i", help="Dataset uri, default stdin")] = "-",
 ):
+    """Load all entities of a FollowTheMoney dataset (index.json)."""
     with ErrorHandler():
         io.load_dataset(uri)
 
@@ -60,6 +77,7 @@ def cli_load_dataset(
 def cli_load_catalog(
     uri: Annotated[str, typer.Option("-i", help="Catalog uri, default stdin")] = "-",
 ):
+    """Load every dataset of a FollowTheMoney catalog (catalog.json)."""
     with ErrorHandler():
         io.load_catalog(uri)
 
@@ -81,6 +99,7 @@ def cli_lookup(
         typer.Option("--topics", help="Only match clusters with any of these topics"),
     ] = None,
 ):
+    """Look up the best matching known name for a query string."""
     with ErrorHandler():
         # `lookup` is lru_cached, so the narrowing args have to be hashable
         result = lookup(
@@ -147,6 +166,7 @@ def cli_percolate(
 
 @cli.command("build")
 def cli_build():
+    """Build the search index and the extraction automaton from loaded data."""
     with ErrorHandler():
         store = get_build_store()
         store.build()

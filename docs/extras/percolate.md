@@ -63,7 +63,7 @@ The whole second-stage in-memory index lives only for the duration of the percol
 
 `percolate_min_should_match` (env `JUDITHA_PERCOLATE_MIN_SHOULD_MATCH`, default `2`) sets `minimum_number_should_match` on the blocking `boolean_query`. Default `2` is recall-safe by construction: percolatable names need `>= MIN_TOKEN_COUNT == 2` tokens to be considered, and the `tokens` field carries every token, so every percolatable doc contributes >= 2 tokens to the index.
 
-`settings.min_token_length` (env `JUDITHA_MIN_TOKEN_LENGTH`, default `4`) only feeds the Aho-Corasick extractor's pattern-length floor (`min_token_length × MIN_TOKEN_COUNT`); the percolator does not consult it. The percolator's own per-token floor is the hardcoded `MIN_TOKEN_CHARS = 2` in `juditha.percolator` (strips single-char noise). `MIN_TOKEN_COUNT = 2` lives there too and skips single-token names regardless.
+`settings.min_token_length` (env `JUDITHA_MIN_TOKEN_LENGTH`, default `4`) only feeds the Aho-Corasick extractor's pattern-length floor (`min_token_length × MIN_TOKEN_COUNT`); the percolator does not consult it. The percolator's own per-token floor is the hardcoded `MIN_TOKEN_CHARS = 2` in `juditha.percolator` (strips single-char noise). `MIN_TOKEN_COUNT = 2` lives there too and skips single-token names regardless, including single-token places that `extract` does surface for `Address` clusters.
 
 ## Percolate vs extract
 

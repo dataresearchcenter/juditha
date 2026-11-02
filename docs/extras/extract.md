@@ -1,6 +1,6 @@
 # Extract
 
-`juditha extract` walks a fulltext and returns every stored name that appears in it. The mechanism is an [Aho-Corasick automaton](https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm) built at index time over every multi-token normalized name in the corpus.
+`juditha extract` walks a fulltext and returns every stored name that appears in it. The mechanism is an [Aho-Corasick automaton](https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm) built at index time over every multi-token normalized name in the corpus (and every single-token place name, see below).
 
 Use this when:
 
@@ -43,9 +43,9 @@ for m in mentions:
 
 ## How it works
 
-1. At `build` time every name in every cluster is ICU-normalized (NFKC casefold + Latin transliteration via rigour) and tokenized. Names with fewer than 2 tokens or with a total normalized length under 8 characters are dropped (filters out "EU", "ag", and similar noise).
-2. Each surviving pattern is wrapped with leading and trailing spaces (`" european parliament "`) so the automaton itself enforces token-boundary alignment.
-3. At extraction time the input text is tokenized with the same ICU normalization, joined back together with spaces, and run through the automaton in a single O(n) pass.
+1. At `build` time every name in every cluster is ICU-normalized (NFKC casefold + Latin transliteration via rigour) and tokenized. Names with fewer than 2 tokens or with a total normalized length under 8 characters are dropped (filters out "EU", "ag", and similar noise). Clusters carrying the `Address` schema (places, see [GeoNames](../load-data/geonames.md)) are exempt from the token floor: a single token of at least 4 characters is a pattern, so "Berlin" and "Iran" are extractable.
+2. Each surviving pattern is wrapped with leading and trailing spaces (`" european parliament "`) so the automaton itself enforces token-boundary alignment. Tokens inside a pattern are separated by two spaces.
+3. At extraction time the input text is tokenized with the same ICU normalization, joined back together with two spaces between tokens, and run through the automaton in a single O(n) pass. The double space is what lets adjacent names both match ("Berlin, Hamburg, Kiel"): leftmost-longest matches never overlap, so one match's trailing space and the next match's leading space must be two different characters.
 4. Match positions in the normalized text are mapped back to original-text byte offsets via a precomputed `char_to_token` array, so `Mention.start` and `Mention.end` index into the *original* text.
 
 ## Persistence
@@ -57,5 +57,5 @@ The automaton is persisted alongside the tantivy index as `automaton.txt` (tab-d
 ## Limits
 
 - Exact post-normalization match only. "Müller" and "muller" match (ICU folding), but "Jane Doe" and "Jane M. Doe" do not (the intervening token breaks the match).
-- Single-token names ("EU", "Britta") are dropped to keep noise low. If you need to surface those, [percolate](percolate.md) doesn't change that floor either, by design.
+- Single-token names ("EU", "Britta") are dropped to keep noise low, except for places ([GeoNames](../load-data/geonames.md) `Address` clusters). If you need to surface the others, [percolate](percolate.md) doesn't change that floor either, by design.
 - Build-time memory scales with corpus size. For multi-million-name corpora `juditha percolate` is the more sustainable choice.

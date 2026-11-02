@@ -6,6 +6,7 @@ from ftmq.io import smart_read_proxies
 from ftmq.model.dataset import Catalog, Dataset
 from ftmq.util import make_entity
 
+from juditha import geonames
 from juditha.store import BuildStore, get_build_store
 
 log = get_logger(__name__)
@@ -58,6 +59,20 @@ def load_catalog(
             load_dataset(dataset.uri, store)
     if sync:
         store.build()
+
+
+def load_geonames(uri: Uri, store: BuildStore | None = None) -> None:
+    """Load places from a GeoNames dump (`allCountries.zip`, a per-country
+    zip, or the unpacked tab-separated text) as `Address` entities."""
+    store = store or get_build_store()
+    entities = logged_items(
+        geonames.iter_entities(uri),
+        "Load",
+        item_name="Place",
+        logger=log,
+        uri=uri,
+    )
+    store.aggregator.load_entities(entities)
 
 
 def load_names(
