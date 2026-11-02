@@ -1,0 +1,11 @@
+# datapatch lookups, keyed by the entity attribute they match on
+name:
+  normalize: true
+  lowercase: true
+  options:
+    - match: Deutschland
+      schema: PublicBody
+topics:
+  options:
+    - match: corp.public
+      schema: PublicBody

@@ -93,6 +93,10 @@ store.build()
 
 `put` buffers up to 10 000 entries and auto-flushes; `flush()` is only needed at the end of a batch (or before `build`).
 
+## Fixing the source data
+
+Mislabelled schemata and similar source defects can be corrected while loading with a [datapatch](https://github.com/opensanctions/datapatch) file, see [Patches](patches.md).
+
 ## Inspecting the aggregator
 
 The aggregator clusters by `name_key` (canonical, order-independent form). To see what's in there:

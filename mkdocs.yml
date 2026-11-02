@@ -12,6 +12,7 @@ nav:
       - Names: load-data/names.md
       - Entities: load-data/entities.md
       - GeoNames: load-data/geonames.md
+      - Patches: load-data/patches.md
   - Extra features:
       - Extract: extras/extract.md
       - Percolate: extras/percolate.md

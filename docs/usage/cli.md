@@ -10,7 +10,7 @@ This page covers the workflow, environment variables, and `stdin` / `stdout` con
 load-* (any number of times)  ->  build  ->  lookup / extract / percolate
 ```
 
-`load-*` writes into the LevelDB aggregator. Nothing is searchable until you run `build`, which rebuilds the tantivy index and the Aho-Corasick extractor in one pass over the aggregator.
+`load-*` writes into the LevelDB aggregator, applying the [data patches](../load-data/patches.md) configured via `JUDITHA_PATCHES` on the way. Nothing is searchable until you run `build`, which rebuilds the tantivy index and the Aho-Corasick extractor in one pass over the aggregator.
 
 ```bash
 # Ingest

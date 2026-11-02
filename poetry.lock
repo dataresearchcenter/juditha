@@ -813,6 +813,25 @@ files = [
 ]
 
 [[package]]
+name = "datapatch"
+version = "1.2.4"
+description = "A library for defining rule-based overrides on messy data."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "datapatch-1.2.4-py3-none-any.whl", hash = "sha256:b6c2dae33a6635d6526b122bcd2229f098ef9f833bd60a93f644a10d82dde699"},
+]
+
+[package.dependencies]
+babel = ">=2.9.1"
+normality = ">=2.1.1"
+pyyaml = "*"
+
+[package.extras]
+dev = ["black", "build", "bump2version", "flake8", "isort", "mypy", "pytest", "pytest-cov", "types-pyyaml", "wheel"]
+
+[[package]]
 name = "dateparser"
 version = "1.4.3"
 description = "Date parsing library designed to parse dates from HTML pages"
@@ -4524,6 +4543,18 @@ files = [
 ]
 
 [[package]]
+name = "types-pyyaml"
+version = "6.0.12.20261030"
+description = "Typing stubs for PyYAML"
+optional = false
+python-versions = ">=3.10"
+groups = ["dev"]
+files = [
+    {file = "types_pyyaml-6.0.12.20261030-py3-none-any.whl", hash = "sha256:508cc80546918201026a955356222111224e1f4f7deab0b91f2a95933f764e67"},
+    {file = "types_pyyaml-6.0.12.20261030.tar.gz", hash = "sha256:9123d707aa31a3883eeb2cb290537c75246dfcb1c00abed7a70f5419d3bd31ae"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -4714,4 +4745,4 @@ tomli = ">=2.4.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "b865b367100cc5935903a747b5d1a383ecde5784a92a81f932cc8afc84c19a3c"
+content-hash = "61be1d1561352551af960d0dd74ec6fccd32d443fe6193bd44f91727cced42c2"

@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Kern County). Canonical `name` / `asciiname` use a fixed floor of 4.
     # Only affects loading; reload + `juditha build` to apply.
     geonames_min_alternate_length: int = 6
+    # Uri of a YAML file of datapatch lookups applied to every entity while
+    # loading (`Aggregator.put`), e.g. to fix a schema. See `juditha.patch`.
+    patches: str | None = None
     # Bind address for `juditha serve`. Defaults to localhost, not
     # 0.0.0.0: the gRPC api has no authentication, so exposing it beyond
     # the loopback interface has to be a deliberate act.

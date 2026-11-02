@@ -82,6 +82,18 @@ The percolator does NOT consult this setting: it uses the hardcoded `MIN_TOKEN_C
 
 Minimum normalized length for name variants taken from the GeoNames `alternatenames` column. Short alternates are where most place false positives come from (Sind → Sindh, Mein → Maine, Kern → Kern County). The canonical `name` and `asciiname` use a fixed floor of 4 and are not affected. Lower toward 4 to match transliterations like "Roma"; raise for stricter, canonical-leaning matching. See [Load data / GeoNames](../load-data/geonames.md).
 
+### `JUDITHA_PATCHES`
+
+| | |
+| --- | --- |
+| Field | `patches` |
+| Type | `str \| None` |
+| Default | `None` |
+| Read at | `Aggregator` creation, i.e. every `load-*` command |
+| Rebuild needed | reload the data, then `juditha build` |
+
+Uri of a YAML file of [datapatch](https://github.com/opensanctions/datapatch) lookups applied to every entity while loading, for example to turn a mislabelled `Company` into a `PublicBody`. Unset means no patching. See [Load data / Patches](../load-data/patches.md).
+
 ## Query-time tuning
 
 ### `JUDITHA_PERCOLATE_BLOCK_LIMIT`
