@@ -78,7 +78,7 @@ Does not build the index. Run `juditha build` afterwards.
 
 ## load-geonames
 
-Ingest places from a [GeoNames](https://www.geonames.org/) dump as `Address` entities. See [Load data / GeoNames](load-data/geonames.md) for the row and name filters.
+Ingest places from a [GeoNames](https://www.geonames.org/) dump as `Address` entities. Needs the `geonames` extra (`pip install "juditha[geonames]"`). See [Load data / GeoNames](load-data/geonames.md) for the row and name filters.
 
 ```text
 juditha load-geonames [OPTIONS]

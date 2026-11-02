@@ -10,6 +10,7 @@ import csv
 import io
 import os
 import zipfile
+from functools import lru_cache
 from typing import IO, Generator, Iterator
 
 from anystore.io import SyncProgressBar, smart_open
@@ -49,14 +50,27 @@ SOURCE_FIELDNAMES = (
 # only; the raw `name` length floor is stricter for cities (P) to drop
 # short ambiguous town names, looser for admin areas (A) so countries like
 # "Iran" survive. Big cities are never noise, so from `BIG_CITY_POPULATION`
-# on the name floor is waived: otherwise "Hamburg" (7 chars) or "Kiel" are
-# unreachable, as their admin rows carry the bare name only as an
-# alternate that the substring rule drops.
+# on the name floor and the dictionary-word filter below are waived:
+# otherwise "Hamburg" (7 chars) or "Kiel" are unreachable, as their admin
+# rows carry the bare name only as an alternate that the substring rule
+# drops, and "Berlin" or "China" are common words in every language.
 FEATURES = ("A", "P")
 MIN_NAME_LENGTH = 8  # P rows
 MIN_NAME_LENGTH_A = 4  # A rows
 MIN_POPULATION = 5_000
 BIG_CITY_POPULATION = 100_000
+
+# Dictionary-word filter (from geonames-tagger): a single-token variant of
+# a place below `BIG_CITY_POPULATION` is dropped when it is a common word
+# in any of these languages. Input text language is unknown at build time,
+# so the check is multilingual: "auch" (a French town, German for "also")
+# produced 633 false mentions in one German report. Only single tokens are
+# checked, wordfreq scores phrases like "deutsche bank" as common too;
+# hyphenated tokens ("saint-laurent") are exempt for the same reason.
+# zipf > 4.5 is roughly the top 30k words of a language. Needs the
+# `juditha[geonames]` extra (wordfreq).
+COMMON_WORD_LANGS = ("de", "en", "fr", "es", "it", "nl", "pt", "ru")
+COMMON_WORD_MAX_ZIPF = 4.5
 
 # Normalized length floor for the canonical `name` / `asciiname` variants.
 # Alternates use `Settings.geonames_min_alternate_length` instead.
@@ -149,6 +163,25 @@ def iter_rows(uri: Uri) -> Generator[dict[str, str], None, None]:
             _advance(bar, fh, last)
 
 
+@lru_cache(maxsize=200_000)
+def is_dictionary_word(norm: str) -> bool:
+    """Whether `norm` (a single normalized token) is a common word in any
+    of `COMMON_WORD_LANGS`."""
+    try:
+        from wordfreq import zipf_frequency
+    except ImportError as e:  # pragma: no cover
+        raise ImportError(
+            "`load-geonames` needs wordfreq: pip install 'juditha[geonames]'"
+        ) from e
+    return any(
+        zipf_frequency(norm, lang) > COMMON_WORD_MAX_ZIPF for lang in COMMON_WORD_LANGS
+    )
+
+
+def _is_plain_token(norm: str) -> bool:
+    return " " not in norm and "-" not in norm
+
+
 def _is_substring_token(norm: str, canonical_norm: str) -> bool:
     """Single token that is a strict substring of the canonical norm."""
     if " " in norm or len(norm) >= len(canonical_norm):
@@ -162,9 +195,12 @@ def select_variants(row: dict[str, str], min_alternate_length: int) -> list[str]
     that clear `min_alternate_length`, aren't numeric codes and aren't a
     single-token strict substring of the canonical norm ("berlin" in
     "land berlin", "kern" in "kern county": those exist as their own rows
-    if they are real places). Returns the original strings, deduplicated
-    on their normalized form, canonical first."""
+    if they are real places). Below `BIG_CITY_POPULATION`, single-token
+    variants that are dictionary words are dropped too. Returns the
+    original strings, deduplicated on their normalized form, canonical
+    first."""
     canonical_norm = _normalize_for_extraction(row["name"] or "")
+    small = int(row.get("population") or 0) < BIG_CITY_POPULATION
     candidates: list[tuple[str, bool]] = [
         (v, False) for v in (row.get("name"), row.get("asciiname")) if v
     ]
@@ -180,6 +216,8 @@ def select_variants(row: dict[str, str], min_alternate_length: int) -> list[str]
         if norm.replace(" ", "").isdigit():
             continue
         if is_alternate and _is_substring_token(norm, canonical_norm):
+            continue
+        if small and _is_plain_token(norm) and is_dictionary_word(norm):
             continue
         seen.add(norm)
         variants.append(value)

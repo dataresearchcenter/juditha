@@ -32,6 +32,9 @@ dependencies = [
 [project.scripts]
 juditha = "juditha.cli:cli"
 
+[project.optional-dependencies]
+geonames = ["wordfreq (>=3.1.1,<4.0.0)"]
+
 [tool.poetry.group.dev.dependencies]
 black = "^26.5.1"
 isort = "^9.0.2"

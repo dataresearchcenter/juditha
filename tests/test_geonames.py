@@ -40,6 +40,7 @@ def test_geonames_rows(fixtures_path):
         "2911298",  # "Hamburg" city row: 7 chars < 8, but 1.9M people
         "6547539",
         "9000002",
+        "6448311",  # "Auch" FR, ADM4: 4 chars, 22k people, passes the row floors
     }
     assert "9000001" not in rows  # "Rolle": 5 chars < 8, 6000 people
     assert "9000003" not in rows  # population 120
@@ -62,6 +63,28 @@ def test_geonames_variants(fixtures_path):
     variants = geonames.select_variants(rows["9000002"], min_alternate_length=4)
     assert "Kerny" in variants
     assert "Kern" not in variants
+
+
+def test_geonames_dictionary_words(fixtures_path):
+    rows = {
+        r["geonameid"]: r for r in geonames.iter_rows(fixtures_path / "geonames.txt")
+    }
+    assert geonames.is_dictionary_word("auch")
+    assert geonames.is_dictionary_word("berlin")
+    assert not geonames.is_dictionary_word("katharina")
+    # a small place whose name is a common word is dropped entirely ...
+    assert geonames.select_variants(rows["6448311"], min_alternate_length=6) == []
+    # ... a big one is kept, name and alternates alike
+    variants = geonames.select_variants(rows["2950159"], min_alternate_length=6)
+    assert variants[0] == "Berlin"
+    assert "Berlino" in variants
+    # hyphenated tokens are not checked
+    assert geonames._is_plain_token("auch") and not geonames._is_plain_token(
+        "saint-laurent"
+    )
+    assert "GEO:6448311" not in {
+        e.id for e in geonames.iter_entities(fixtures_path / "geonames.txt")
+    }
 
 
 def test_geonames_entities(fixtures_path):
@@ -139,8 +162,8 @@ def test_geonames_extract(geonames_store):
     # adjacent single-token places all match
     mentions = geonames_store.extract("Berlin, Hamburg, Berlin.")
     assert [m.text for m in mentions] == ["Berlin", "Hamburg", "Berlin"]
-    # dropped rows never match
-    assert geonames_store.extract("Rolle and Tinyville Hamlet and Kern") == []
+    # dropped rows never match, nor does a dictionary-word place
+    assert geonames_store.extract("Rolle and Tinyville Hamlet and Kern, auch.") == []
 
 
 def test_geonames_percolate(geonames_store):

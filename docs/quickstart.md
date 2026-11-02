@@ -8,6 +8,7 @@ Five-minute walkthrough: install, populate a tiny corpus, build the index, run a
 
 ```bash
 pip install juditha
+pip install "juditha[geonames]"   # if you want to load places from GeoNames
 ```
 
 You can verify the install with `juditha --version`.

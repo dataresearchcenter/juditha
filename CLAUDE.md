@@ -33,7 +33,7 @@ Always use the virtualenv at `.venv`: run Python via `.venv/bin/python` and tool
 ## Development Commands
 
 ```bash
-make install      # poetry install --with dev
+make install      # poetry install --with dev --all-extras
 make test         # pytest with coverage
 make typecheck    # mypy --strict juditha
 make lint         # flake8
@@ -65,7 +65,7 @@ make documentation  # zensical build + S3 sync (deploys docs.investigraph.dev)
 
 - **Patches** (`patch.py`): `JUDITHA_PATCHES` names a YAML file of [datapatch](https://github.com/opensanctions/datapatch) lookups, keyed by the entity attribute they match on (an FTM property or `schema`); a matching option's `schema` re-creates the entity with that schema. Applied in `Aggregator.put`, i.e. at load time by every loader, never at build. `get_patches(uri)` is `@cache`d; the `Aggregator` resolves it once in `__init__`. datapatch's `normalize: true` does not fold case unless `lowercase: true` is set too.
 
-- **GeoNames loader** (`geonames.py`): port of [geonames-tagger](https://github.com/dataresearchcenter/geonames-tagger). `iter_entities(uri)` reads a dump (`allCountries.zip`, a per-country zip whose data member is `<stem>.txt` next to a `readme.txt`, or the unpacked `.txt`), applies the upstream row filters (feature classes `A` / `P`, population ≥ 5000, raw name ≥ 8 chars for `P` rows and ≥ 4 for `A` rows, waived from `BIG_CITY_POPULATION = 100_000` on since "Hamburg" or "Kiel" are otherwise unreachable: their admin rows carry the bare name only as a substring alternate) and variant filters (canonical norm ≥ 4, alternates ≥ `Settings().geonames_min_alternate_length`, no numeric codes, no single-token substring of the canonical norm), and yields one `Address` entity per row with id `GEO:<geonameid>`, `name`, `alias`, `country`. Variants are normalized with `extraction._normalize_for_extraction`, so the floors apply to exactly the automaton pattern. No wordfreq: it scores proper nouns like ordinary words (berlin 5.7, "deutsche bank" 4.8), so it cannot separate names from noise.
+- **GeoNames loader** (`geonames.py`): port of [geonames-tagger](https://github.com/dataresearchcenter/geonames-tagger). `iter_entities(uri)` reads a dump (`allCountries.zip`, a per-country zip whose data member is `<stem>.txt` next to a `readme.txt`, or the unpacked `.txt`), applies the upstream row filters (feature classes `A` / `P`, population ≥ 5000, raw name ≥ 8 chars for `P` rows and ≥ 4 for `A` rows, waived from `BIG_CITY_POPULATION = 100_000` on since "Hamburg" or "Kiel" are otherwise unreachable: their admin rows carry the bare name only as a substring alternate) and variant filters (canonical norm ≥ 4, alternates ≥ `Settings().geonames_min_alternate_length`, no numeric codes, no single-token substring of the canonical norm, and below `BIG_CITY_POPULATION` no single-token dictionary word), and yields one `Address` entity per row with id `GEO:<geonameid>`, `name`, `alias`, `country`. Variants are normalized with `extraction._normalize_for_extraction`, so the floors apply to exactly the automaton pattern. The dictionary-word check (`is_dictionary_word`, wordfreq zipf > 4.5 in any of 8 languages) needs the `juditha[geonames]` extra and is imported lazily. It only works together with the population override: wordfreq scores proper nouns like ordinary words (berlin 5.7, "deutsche bank" 4.8), so it is never applied to multi-token or hyphenated names and never to places with 100k+ people. Measured on the vsbericht benchmark it removes 909 of 2446 Address mentions, all junk ("auch" alone: 633).
 
 - **AhoExtractor** (`extraction.py`): Aho-Corasick automaton for exact multi-token name matching on fulltext. Patterns are wrapped with leading and trailing whitespace so the automaton itself enforces token-boundary alignment; tokens are joined with `TOKEN_SEP` (two spaces) in both the patterns and the scanned text, because leftmost-longest matches don't overlap and a single shared space would swallow the boundary the next adjacent name starts on. Pattern-length floor is derived from `Settings().min_token_length × MIN_TOKEN_COUNT` so it stays coupled to the percolator's blocking threshold. Docs whose schemata include `Address` are exempt from the token-count floor (`min_tokens = 1`), so single-token places ("Berlin") become patterns. Per pattern the automaton holds schema and topics as parallel lists.
 
@@ -166,6 +166,7 @@ Runtime:
 - `ahocorasick-rs`: Aho-Corasick automaton for extraction
 - `datapatch` (≥ 1.2.4): YAML lookups for load-time data patches (`JUDITHA_PATCHES`).
 - `grpcio` (≥ 1.83) / `protobuf`: the gRPC api. Main dependencies, not an extra, so `juditha serve` and `ApiStore` work out of the box.
+- `wordfreq` (≥ 3.1.1): optional extra `geonames`, only for `load-geonames`' dictionary-word filter (57 MB wheel, imported lazily).
 
 Dev:
 - `pytest`, `pytest-coverage`, `pytest-env`
