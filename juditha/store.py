@@ -7,18 +7,29 @@ name without splitting on whitespace.
 
 Query shape (per refactor plan):
     BooleanQuery:
-      should: fuzzy(key,     clean_q, d=2, transp=1) * 3.0
-      should: fuzzy(names,   clean_q, d=2, transp=1) * 2.0
-      should: fuzzy(aliases, clean_q, d=2, transp=1) * 1.0
+      should: term(name_keys,  clean_q)                   * 10.0
+      should: fuzzy(key,       clean_q, d=2, transp=1) * 3.0
+      should: fuzzy(names,     clean_q, d=2, transp=1) * 2.0
+      should: fuzzy(name_keys, clean_q, d=2, transp=1) * 2.0
+      should: fuzzy(aliases,   clean_q, d=2, transp=1) * 1.0
       should: bool(should=[term(phonetic, c) for c in metaphone(clean_q)]) * 0.5
       [must: symbols ⊇ extracted_symbols]
       [must: qid = qid_hint]
       [must: schemata ∈ requested_schemata]
       [must: topics ∈ requested_topics]
 
-Rerank: tantivy returns top-K → jaro on hit.key → rapidfuzz fallback over
-hit.names. Phonetic-only hits that are semantically wrong get filtered by
-the rerank stage.
+`names` and `aliases` hold raw surface forms while `clean_q` is a
+`name_key()`, so the fuzzy clauses on them only fire when the surface form
+happens to be within edit distance of the normalized query. `name_keys`
+holds the `name_key()` of every name and alias: the exact term clause is
+what puts the cluster at rank 1 when the query is one of its aliases
+("Bayern" for Bavaria, "Free State of Thuringia" for Thuringia), the fuzzy
+one covers normalized near-misses ("Thuringen" vs "Thueringen").
+
+Rerank: tantivy returns top-K → jaro on hit.key, rapidfuzz over the
+name_key() of hit.names ∪ hit.aliases when that falls short → best score
+above the threshold wins. Phonetic-only hits that are semantically wrong
+get filtered by the rerank stage.
 """
 
 import multiprocessing
@@ -82,6 +93,9 @@ def make_schema() -> tantivy.Schema:
     b.add_text_field("phonetic", tokenizer_name="raw", stored=False)
     # percolator blocking: per-token inverted index over names + aliases
     b.add_text_field("tokens", tokenizer_name="raw", stored=False)
+    # name_key() of every name and alias, the form `search` queries in;
+    # `names` / `aliases` are raw surface forms. Index-only, not stored.
+    b.add_text_field("name_keys", tokenizer_name="raw", stored=False)
     return b.build()
 
 
@@ -159,8 +173,19 @@ def build_query(
 
     clauses: list[tuple[tantivy.Occur, tantivy.Query]] = []
 
+    # tier 0: the query is exactly one of the cluster's normalized names or
+    # aliases. Boosted above every fuzzy clause so an alias match ranks
+    # first instead of somewhere in the fuzzy long tail beyond `limit`.
+    exact = Q.term_query(schema, "name_keys", clean_q)
+    clauses.append((Occur.Should, Q.boost_query(exact, 10.0)))
+
     # tier 1: fuzzy across name fields with juditha's boost scheme
-    for field, boost in (("key", 3.0), ("names", 2.0), ("aliases", 1.0)):
+    for field, boost in (
+        ("key", 3.0),
+        ("names", 2.0),
+        ("name_keys", 2.0),
+        ("aliases", 1.0),
+    ):
         fq = Q.fuzzy_term_query(
             schema,
             field,
@@ -307,7 +332,12 @@ class Store(BaseStore):
         searcher = self.index.searcher()
         hits = searcher.search(query, limit).hits
 
-        deferred: list[Doc] = []
+        # Rerank: jaro on the cluster key, rapidfuzz over the normalized
+        # names and aliases when that falls short. The best score above
+        # the threshold wins, not the first: tantivy's order is BM25 over
+        # fuzzy matches, so at a low threshold the first hit over it can be
+        # a near-miss ranked above the exact match.
+        best: tuple[float, Doc] | None = None
         for _, addr in hits:
             tdoc = searcher.doc(addr)
             data = tdoc.to_dict()
@@ -320,21 +350,22 @@ class Store(BaseStore):
                 topics=set(data.get("topics", [])),
             )
             score = jellyfish.jaro_similarity(clean_q, doc.key)
-            if score > threshold:
-                took = (time.perf_counter() - t0) * 1000
-                return Result.from_doc(doc, q, score, took=took)
-            deferred.append(doc)
+            if score <= threshold:
+                # alias-driven match that doesn't rank on `key`
+                forms = [name_key(n) for n in doc.names | doc.aliases]
+                res = process.extractOne(clean_q, forms)
+                if res is not None:
+                    score = max(score, res[1] / 100)
+            if score > threshold and (best is None or score > best[0]):
+                best = (score, doc)
+                if score >= 1.0:
+                    break
 
-        # Second pass: rapidfuzz over each hit's full surface-form set, to
-        # catch alias-driven matches that don't rank on `key`.
-        for doc in deferred:
-            res = process.extractOne(clean_q, [name_key(n) for n in doc.names])
-            if res is not None:
-                score = res[1] / 100
-                if score > threshold:
-                    took = (time.perf_counter() - t0) * 1000
-                    return Result.from_doc(doc, q, score, took=took)
-        return None
+        if best is None:
+            return None
+        score, doc = best
+        took = (time.perf_counter() - t0) * 1000
+        return Result.from_doc(doc, q, score, took=took)
 
     def extract(self, text: str) -> list[Mention]:
         return self.extractor.extract(text)
@@ -393,6 +424,9 @@ class BuildStore(Store):
         # (`Settings.percolate_min_should_match`) does the rest of the
         # noise reduction.
         tokens: set[str] = set()
+        # name_keys powers the exact / fuzzy alias clauses of `search`: the
+        # same `name_key()` form the query is normalized to.
+        name_keys: set[str] = set()
         for n in names_all:
             q_n, s_n = _name_features(n)
             qids.update(q_n)
@@ -401,6 +435,8 @@ class BuildStore(Store):
             for t in tokenize_forms(n):
                 if len(t) >= MIN_TOKEN_CHARS:
                     tokens.add(t)
+            if nk := name_key(n):
+                name_keys.add(nk)
 
         fields: dict[str, str | list[str]] = {
             "key": doc.key,
@@ -413,6 +449,7 @@ class BuildStore(Store):
             "symbols": sorted(symbols),
             "phonetic": sorted(phonetic),
             "tokens": sorted(tokens),
+            "name_keys": sorted(name_keys),
         }
         self.buffer.append(tantivy.Document(**fields))
         if len(self.buffer) >= 100_000:

@@ -41,6 +41,7 @@ def test_geonames_rows(fixtures_path):
         "6547539",
         "9000002",
         "6448311",  # "Auch" FR, ADM4: 4 chars, 22k people, passes the row floors
+        "2921044",  # "Federal Republic of Germany", PCLI
     }
     assert "9000001" not in rows  # "Rolle": 5 chars < 8, 6000 people
     assert "9000003" not in rows  # population 120
@@ -59,6 +60,12 @@ def test_geonames_variants(fixtures_path):
     assert variants[0] == "Land Berlin"
     assert "Berlin" not in variants  # substring of "land berlin"
     assert "Berlino" in variants
+    # countries are named formally and the bare name has no row of its own,
+    # so the substring rule is waived for PCL* rows
+    variants = geonames.select_variants(rows["2921044"], min_alternate_length=6)
+    assert variants[0] == "Federal Republic of Germany"
+    assert "Germany" in variants
+    assert "Deutschland" in variants
     # the alternate floor is a setting
     variants = geonames.select_variants(rows["9000002"], min_alternate_length=4)
     assert "Kerny" in variants
@@ -134,6 +141,19 @@ def test_geonames_search(geonames_store):
     assert res is not None
     assert res.caption == "Berlin"
     assert geonames_store.search("Berlin", schemata=("Person",)) is None
+    # alias matches: the query is the name_key of an alternate, not of the
+    # name, so neither the key nor the surface forms are within fuzzy reach
+    res = geonames_store.search("Germany")
+    assert res is not None
+    assert res.caption == "Federal Republic of Germany"
+    assert res.score == 1
+    res = geonames_store.search("Deutschland")
+    assert res is not None
+    assert res.caption == "Federal Republic of Germany"
+    res = geonames_store.search("Berlino")
+    assert res is not None
+    assert "Berlino" in res.aliases
+    assert res.score == 1
 
 
 def test_geonames_lookup(geonames_store):
@@ -159,6 +179,9 @@ def test_geonames_extract(geonames_store):
     # big city below the raw name floor
     mentions = by_text(geonames_store.extract("Hamburg is a port."))
     assert mentions["Hamburg"].schema_ == "Address"
+    # a country's bare name, only an alternate of its formal name
+    mentions = by_text(geonames_store.extract("Made in Germany."))
+    assert mentions["Germany"].schema_ == "Address"
     # adjacent single-token places all match
     mentions = geonames_store.extract("Berlin, Hamburg, Berlin.")
     assert [m.text for m in mentions] == ["Berlin", "Hamburg", "Berlin"]
