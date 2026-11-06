@@ -50,7 +50,7 @@ ipdb = "^0.13.13"
 ipython = "^9.16.1"
 grpcio-tools = ">=1.83.0,<2.0.0"
 types-grpcio = "^1.83.0"
-types-pyyaml = "^6.0.12.20261030"
+types-pyyaml = "^6.0.12.20261103"
 
 [build-system]
 requires = ["poetry-core"]
