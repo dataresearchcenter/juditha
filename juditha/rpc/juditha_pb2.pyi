@@ -66,6 +66,18 @@ class SearchResponse(_message.Message):
     result: Result
     def __init__(self, result: _Optional[_Union[Result, _Mapping]] = ...) -> None: ...
 
+class SearchManyRequest(_message.Message):
+    __slots__ = ("requests",)
+    REQUESTS_FIELD_NUMBER: _ClassVar[int]
+    requests: _containers.RepeatedCompositeFieldContainer[SearchRequest]
+    def __init__(self, requests: _Optional[_Iterable[_Union[SearchRequest, _Mapping]]] = ...) -> None: ...
+
+class SearchManyResponse(_message.Message):
+    __slots__ = ("responses",)
+    RESPONSES_FIELD_NUMBER: _ClassVar[int]
+    responses: _containers.RepeatedCompositeFieldContainer[SearchResponse]
+    def __init__(self, responses: _Optional[_Iterable[_Union[SearchResponse, _Mapping]]] = ...) -> None: ...
+
 class ExtractRequest(_message.Message):
     __slots__ = ("text",)
     TEXT_FIELD_NUMBER: _ClassVar[int]

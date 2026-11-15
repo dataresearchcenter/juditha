@@ -117,3 +117,32 @@ def test_rpc_get_store_dispatch(served):
 def test_rpc_build_store_rejects_remote():
     with pytest.raises(ValueError):
         get_build_store("grpc://localhost:50051")
+
+
+def test_rpc_search_many_parity(served, monkeypatch):
+    local, remote = served
+    queries = [
+        "European Parliament",
+        "xyzzyplugh gibberish",
+        "European Central Bank",
+        "European Parliament",  # repeated: searched once, returned twice
+    ]
+    expected = [local.search(q) for q in queries]
+    assert expected[0] is not None and expected[1] is None
+    # chunk size 1 forces one round trip per unique query
+    for size in ("1", "10000"):
+        monkeypatch.setenv("JUDITHA_RPC_BATCH_SIZE", size)
+        results = remote.search_many(queries)
+        assert [r and unpack(r) for r in results] == [e and unpack(e) for e in expected]
+    assert [r and unpack(r) for r in local.search_many(queries)] == [
+        e and unpack(e) for e in expected
+    ]
+    assert remote.search_many([]) == []
+
+
+def test_rpc_search_many_filters(served):
+    _, remote = served
+    names = ["European Parliament", "European Central Bank"]
+    assert all(remote.search_many(names, schemata=("PublicBody",)))
+    assert remote.search_many(names, schemata=("Person",)) == [None, None]
+    assert all(remote.search_many(["European Parlment"], threshold=0.5))

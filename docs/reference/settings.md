@@ -187,6 +187,18 @@ Size of the server's thread pool, which caps concurrent in-flight requests. tant
 
 Maximum gRPC message size, applied to both send and receive on both ends. gRPC's own default is 4 MB, which `extract` and `percolate` exceed on real documents. Set this on the client as well as the server: a mismatch shows up as `RESOURCE_EXHAUSTED` on whichever side has the lower limit.
 
+### `JUDITHA_RPC_BATCH_SIZE`
+
+| | |
+| --- | --- |
+| Field | `rpc_batch_size` |
+| Type | `int` |
+| Default | `10000` |
+| Read at | every `ApiStore.search_many` call |
+| Rebuild needed | no |
+
+Client-side only. Number of unique queries `ApiStore.search_many` sends per `SearchMany` round trip. A result is roughly 0.1 to 1 KB on the wire, so the default stays well inside `JUDITHA_RPC_MAX_MESSAGE_LENGTH`.
+
 ## Debug
 
 ### `JUDITHA_DEBUG`

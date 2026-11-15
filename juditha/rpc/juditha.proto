@@ -10,6 +10,7 @@ package juditha.v1;
 
 service Juditha {
   rpc Search (SearchRequest) returns (SearchResponse);
+  rpc SearchMany (SearchManyRequest) returns (SearchManyResponse);
   rpc Extract (ExtractRequest) returns (MentionsResponse);
   rpc Percolate (PercolateRequest) returns (MentionsResponse);
 }
@@ -55,6 +56,15 @@ message SearchRequest {
 message SearchResponse {
   // Absent means no match above the threshold (`Store.search` returned None).
   optional Result result = 1;
+}
+
+message SearchManyRequest {
+  repeated SearchRequest requests = 1;
+}
+
+message SearchManyResponse {
+  // One per request, same order. An unset `result` means no match.
+  repeated SearchResponse responses = 1;
 }
 
 message ExtractRequest {

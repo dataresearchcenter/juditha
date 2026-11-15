@@ -255,6 +255,28 @@ class BaseStore(ABC):
         values.
         """
 
+    def search_many(
+        self,
+        queries: Iterable[str],
+        threshold: float | None = None,
+        limit: int | None = None,
+        schemata: Iterable[str] | None = None,
+        topics: Iterable[str] | None = None,
+    ) -> list[Result | None]:
+        """`search` for every query, results in query order.
+
+        Repeated queries are searched once. `ApiStore` overrides this to send
+        the batch in as few round trips as possible.
+        """
+        queries = list(queries)
+        schemata = set(schemata) if schemata else None
+        topics = set(topics) if topics else None
+        found = {
+            q: self.search(q, threshold, limit, schemata, topics)
+            for q in dict.fromkeys(queries)
+        }
+        return [found[q] for q in queries]
+
     @abstractmethod
     def extract(self, text: str) -> list[Mention]:
         """Known-name mentions in `text`, via the Aho-Corasick automaton."""

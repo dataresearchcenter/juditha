@@ -29,6 +29,33 @@ def channel_options() -> list[tuple[str, int]]:
     ]
 
 
+def make_search_request(
+    q: str,
+    threshold: float | None,
+    limit: int | None,
+    schemata: Iterable[str] | None,
+    topics: Iterable[str] | None,
+) -> pb.SearchRequest:
+    request = pb.SearchRequest(
+        q=q,
+        schemata=sorted(schemata) if schemata else None,
+        topics=sorted(topics) if topics else None,
+    )
+    # Leave the optional fields unset so the server falls back to its own
+    # Settings defaults instead of ours.
+    if threshold is not None:
+        request.threshold = threshold
+    if limit is not None:
+        request.limit = limit
+    return request
+
+
+def unpack_search_response(response: pb.SearchResponse) -> Result | None:
+    if not response.HasField("result"):
+        return None
+    return from_pb_result(response.result)
+
+
 class ApiStore(BaseStore):
     """Read-only store backed by a remote juditha gRPC server.
 
@@ -52,21 +79,37 @@ class ApiStore(BaseStore):
         schemata: Iterable[str] | None = None,
         topics: Iterable[str] | None = None,
     ) -> Result | None:
-        request = pb.SearchRequest(
-            q=q,
-            schemata=sorted(schemata) if schemata else None,
-            topics=sorted(topics) if topics else None,
-        )
-        # Leave the optional fields unset so the server falls back to its own
-        # Settings defaults instead of ours.
-        if threshold is not None:
-            request.threshold = threshold
-        if limit is not None:
-            request.limit = limit
-        response = self.stub.Search(request)
-        if not response.HasField("result"):
-            return None
-        return from_pb_result(response.result)
+        request = make_search_request(q, threshold, limit, schemata, topics)
+        return unpack_search_response(self.stub.Search(request))
+
+    def search_many(
+        self,
+        queries: Iterable[str],
+        threshold: float | None = None,
+        limit: int | None = None,
+        schemata: Iterable[str] | None = None,
+        topics: Iterable[str] | None = None,
+    ) -> list[Result | None]:
+        """Batched `search`: unique queries go out in chunks of
+        `Settings.rpc_batch_size`, one `SearchMany` round trip per chunk."""
+        queries = list(queries)
+        unique = list(dict.fromkeys(queries))
+        schemata = sorted(schemata) if schemata else None
+        topics = sorted(topics) if topics else None
+        size = max(1, Settings().rpc_batch_size)
+        found: dict[str, Result | None] = {}
+        for i in range(0, len(unique), size):
+            chunk = unique[i : i + size]
+            request = pb.SearchManyRequest(
+                requests=[
+                    make_search_request(q, threshold, limit, schemata, topics)
+                    for q in chunk
+                ]
+            )
+            response = self.stub.SearchMany(request)
+            for q, res in zip(chunk, response.responses, strict=True):
+                found[q] = unpack_search_response(res)
+        return [found[q] for q in queries]
 
     def extract(self, text: str) -> list[Mention]:
         response = self.stub.Extract(pb.ExtractRequest(text=text))

@@ -28,6 +28,18 @@ class JudithaServicer(pb_grpc.JudithaServicer):
     def Search(
         self, request: pb.SearchRequest, context: grpc.ServicerContext
     ) -> pb.SearchResponse:
+        return self._search(request)
+
+    def SearchMany(
+        self, request: pb.SearchManyRequest, context: grpc.ServicerContext
+    ) -> pb.SearchManyResponse:
+        # Sequential on purpose: one batch is one worker thread, and the
+        # search path holds the GIL for most of its time anyway.
+        return pb.SearchManyResponse(
+            responses=[self._search(r) for r in request.requests]
+        )
+
+    def _search(self, request: pb.SearchRequest) -> pb.SearchResponse:
         result = self.store.search(
             request.q,
             threshold=request.threshold if request.HasField("threshold") else None,

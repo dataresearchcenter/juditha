@@ -56,3 +56,7 @@ class Settings(BaseSettings):
     # Max gRPC message size, client and server side. gRPC defaults to
     # 4 MB, which `extract` / `percolate` blow through on real documents.
     rpc_max_message_length: int = 64 * 1024 * 1024
+    # Queries per `SearchMany` round trip in `ApiStore.search_many`. A
+    # result is roughly 0.1-1 KB on the wire, so 10k stays well inside
+    # `rpc_max_message_length`. Client-side only.
+    rpc_batch_size: int = 10_000
