@@ -97,6 +97,34 @@ def test_lookup_with_entity(fixtures_path, store):
     assert res.names == {"Jane Doe"}
     assert res.score < 1
 
+    # alias: nothing like the key "doe jane", found via name_keys
+    res = store.search("jani")
+    assert res is not None
+    assert res.names == {"Jane Doe"}
+    assert res.score == 1
+
+
+def test_lookup_best_match(store):
+    """The best candidate above the threshold wins, not the first one."""
+    for name in ("Munich", "Manch", "Munchen"):
+        store.aggregator.put(
+            make_entity(
+                {"id": name, "schema": "Address", "properties": {"name": [name]}}
+            )
+        )
+    store.aggregator.flush()
+    store.build()
+    for threshold in (0.97, 0.5):
+        res = store.search("Munich", threshold=threshold)
+        assert res is not None
+        assert res.names == {"Munich"}
+        assert res.score == 1
+    # a near-miss still resolves to the closest cluster
+    res = store.search("Munchn", threshold=0.5)
+    assert res is not None
+    assert res.names == {"Munchen"}
+    assert res.score < 1
+
 
 def test_juditha_cli(monkeypatch, fixtures_path: Path, tmp_path):
     # Need to clear cache to pick up new env var

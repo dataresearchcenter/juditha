@@ -195,12 +195,15 @@ def select_variants(row: dict[str, str], min_alternate_length: int) -> list[str]
     that clear `min_alternate_length`, aren't numeric codes and aren't a
     single-token strict substring of the canonical norm ("berlin" in
     "land berlin", "kern" in "kern county": those exist as their own rows
-    if they are real places). Below `BIG_CITY_POPULATION`, single-token
-    variants that are dictionary words are dropped too. Returns the
-    original strings, deduplicated on their normalized form, canonical
-    first."""
+    if they are real places). Country rows (feature code `PCL*`) are exempt
+    from the substring rule: the dump names them formally ("Federal
+    Republic of Germany"), so "Germany" is only an alternate and has no row
+    of its own. Below `BIG_CITY_POPULATION`, single-token variants that are
+    dictionary words are dropped too. Returns the original strings,
+    deduplicated on their normalized form, canonical first."""
     canonical_norm = _normalize_for_extraction(row["name"] or "")
     small = int(row.get("population") or 0) < BIG_CITY_POPULATION
+    country = (row.get("feature_code") or "").startswith("PCL")
     candidates: list[tuple[str, bool]] = [
         (v, False) for v in (row.get("name"), row.get("asciiname")) if v
     ]
@@ -215,7 +218,7 @@ def select_variants(row: dict[str, str], min_alternate_length: int) -> list[str]
             continue
         if norm.replace(" ", "").isdigit():
             continue
-        if is_alternate and _is_substring_token(norm, canonical_norm):
+        if is_alternate and not country and _is_substring_token(norm, canonical_norm):
             continue
         if small and _is_plain_token(norm) and is_dictionary_word(norm):
             continue

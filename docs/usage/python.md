@@ -60,6 +60,11 @@ The methods you will use most:
 # Best-match search, same engine as juditha.lookup
 result = store.search(query, threshold=None, limit=None, schemata=None, topics=None)
 
+# Many queries at once, same filters for all, results in query order.
+# Against a grpc:// store this is one round trip per JUDITHA_RPC_BATCH_SIZE
+# unique queries instead of one per query.
+results = store.search_many(queries, threshold=None, limit=None, schemata=None, topics=None)
+
 # Aho-Corasick extraction over fulltext
 mentions = store.extract("Some text mentioning Jane Doe.")
 

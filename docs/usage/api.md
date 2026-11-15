@@ -44,12 +44,15 @@ from juditha import get_store, lookup
 
 store = get_store("grpc://localhost:50051")
 store.search("European Parliament")            # -> Result | None
+store.search_many(["European Parliament", "European Council"])  # -> list[Result | None]
 store.extract("The European Parliament met.")  # -> list[Mention]
 store.percolate("The European Parliament met.")
 
 # or via the env var, which `lookup()` picks up too
 lookup("European Parliament")
 ```
+
+Resolving many names (e.g. every NER mention of a document) one `search` at a time costs a full round trip per name. `search_many` sends them as `SearchMany` batches of up to `JUDITHA_RPC_BATCH_SIZE` (default `10000`) unique queries, with one shared set of filters per call: group your queries by `schemata` / `topics` and call it once per group.
 
 Only the read methods cross the wire. `juditha build`, the `load-*` commands and `juditha iterate` are local-only and raise a `ValueError` against a `grpc://` URI, because they need the LevelDB aggregator.
 
@@ -69,7 +72,8 @@ The service definition lives at [`juditha/rpc/juditha.proto`](https://github.com
 
 ```proto
 service Juditha {
-  rpc Search    (SearchRequest)    returns (SearchResponse);
+  rpc Search     (SearchRequest)     returns (SearchResponse);
+  rpc SearchMany (SearchManyRequest) returns (SearchManyResponse);
   rpc Extract   (ExtractRequest)   returns (MentionsResponse);
   rpc Percolate (PercolateRequest) returns (MentionsResponse);
 }
@@ -79,6 +83,7 @@ Notes for clients in other languages:
 
 - `SearchRequest.threshold` and `.limit` are `optional`. Leave them unset to get the server's configured defaults rather than sending your own.
 - `SearchResponse.result` is unset when there is no match above the threshold. That is the wire form of `Store.search` returning `None`.
+- `SearchManyRequest.requests` is a list of plain `SearchRequest`s, each with its own filters. `SearchManyResponse.responses` holds one `SearchResponse` per request, in request order. The server fans a batch out over a pool of `JUDITHA_RPC_WORKERS` threads (separate from the request pool); tantivy releases the GIL while searching, so one batch uses several cores.
 - `Result.common_schema` and `Result.caption` are computed by the server. The python client ignores them and recomputes locally via [rigour](https://github.com/opensanctions/rigour) and [followthemoney](https://followthemoney.tech); other clients can use them as-is. An empty `caption` means there was no name to pick.
 - `Result.took` is measured server-side in milliseconds and does not include network time.
 - `Mention.schema` matches the JSON field name of `juditha.model.Mention` (the python attribute is `schema_`).

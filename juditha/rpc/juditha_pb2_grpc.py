@@ -39,6 +39,11 @@ class JudithaStub:
                 request_serializer=juditha_dot_rpc_dot_juditha__pb2.SearchRequest.SerializeToString,
                 response_deserializer=juditha_dot_rpc_dot_juditha__pb2.SearchResponse.FromString,
                 _registered_method=True)
+        self.SearchMany = channel.unary_unary(
+                '/juditha.v1.Juditha/SearchMany',
+                request_serializer=juditha_dot_rpc_dot_juditha__pb2.SearchManyRequest.SerializeToString,
+                response_deserializer=juditha_dot_rpc_dot_juditha__pb2.SearchManyResponse.FromString,
+                _registered_method=True)
         self.Extract = channel.unary_unary(
                 '/juditha.v1.Juditha/Extract',
                 request_serializer=juditha_dot_rpc_dot_juditha__pb2.ExtractRequest.SerializeToString,
@@ -55,6 +60,12 @@ class JudithaServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Search(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SearchMany(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -79,6 +90,11 @@ def add_JudithaServicer_to_server(servicer, server):
                     servicer.Search,
                     request_deserializer=juditha_dot_rpc_dot_juditha__pb2.SearchRequest.FromString,
                     response_serializer=juditha_dot_rpc_dot_juditha__pb2.SearchResponse.SerializeToString,
+            ),
+            'SearchMany': grpc.unary_unary_rpc_method_handler(
+                    servicer.SearchMany,
+                    request_deserializer=juditha_dot_rpc_dot_juditha__pb2.SearchManyRequest.FromString,
+                    response_serializer=juditha_dot_rpc_dot_juditha__pb2.SearchManyResponse.SerializeToString,
             ),
             'Extract': grpc.unary_unary_rpc_method_handler(
                     servicer.Extract,
@@ -118,6 +134,33 @@ class Juditha:
             '/juditha.v1.Juditha/Search',
             juditha_dot_rpc_dot_juditha__pb2.SearchRequest.SerializeToString,
             juditha_dot_rpc_dot_juditha__pb2.SearchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SearchMany(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/juditha.v1.Juditha/SearchMany',
+            juditha_dot_rpc_dot_juditha__pb2.SearchManyRequest.SerializeToString,
+            juditha_dot_rpc_dot_juditha__pb2.SearchManyResponse.FromString,
             options,
             channel_credentials,
             insecure,
