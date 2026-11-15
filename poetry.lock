@@ -4886,4 +4886,4 @@ geonames = ["wordfreq"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "239c7890bf7d19f4381582a871a5482a21bae95d84b9f32f42e11d3a55eccc6b"
+content-hash = "ad1b7a0ef326f4cbf568ed8e4a5d7a14d42c61daf84e28fc02c16ba1c72ce1a6"
