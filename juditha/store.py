@@ -9,7 +9,6 @@ Query shape (per refactor plan):
     BooleanQuery:
       should: term(name_keys,  clean_q)                   * 10.0
       should: fuzzy(key,       clean_q, d=2, transp=1) * 3.0
-      should: fuzzy(names,     clean_q, d=2, transp=1) * 2.0
       should: fuzzy(name_keys, clean_q, d=2, transp=1) * 2.0
       should: fuzzy(aliases,   clean_q, d=2, transp=1) * 1.0
       should: bool(should=[term(phonetic, c) for c in metaphone(clean_q)]) * 0.5
@@ -19,8 +18,11 @@ Query shape (per refactor plan):
       [must: topics ∈ requested_topics]
 
 `names` and `aliases` hold raw surface forms while `clean_q` is a
-`name_key()`, so the fuzzy clauses on them only fire when the surface form
-happens to be within edit distance of the normalized query. `name_keys`
+`name_key()`, so a fuzzy clause on them only fires when the surface form
+happens to be within edit distance of the normalized query. There is none
+on `names`: it was the most expensive clause (about half the query time on
+a 1M-name corpus) and changed no result that `name_keys` doesn't already
+find. The one on `aliases` stays, it is cheap. `name_keys`
 holds the `name_key()` of every name and alias: the exact term clause is
 what puts the cluster at rank 1 when the query is one of its aliases
 ("Bayern" for Bavaria, "Free State of Thuringia" for Thuringia), the fuzzy
@@ -182,7 +184,8 @@ def build_query(
     # tier 1: fuzzy across name fields with juditha's boost scheme
     for field, boost in (
         ("key", 3.0),
-        ("names", 2.0),
+        # no `names`: raw surface forms, covered by `name_keys` (see the
+        # module docstring), and the most expensive fuzzy clause
         ("name_keys", 2.0),
         ("aliases", 1.0),
     ):

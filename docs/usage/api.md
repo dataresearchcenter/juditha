@@ -83,7 +83,7 @@ Notes for clients in other languages:
 
 - `SearchRequest.threshold` and `.limit` are `optional`. Leave them unset to get the server's configured defaults rather than sending your own.
 - `SearchResponse.result` is unset when there is no match above the threshold. That is the wire form of `Store.search` returning `None`.
-- `SearchManyRequest.requests` is a list of plain `SearchRequest`s, each with its own filters. `SearchManyResponse.responses` holds one `SearchResponse` per request, in request order. The server runs a batch sequentially on one worker thread.
+- `SearchManyRequest.requests` is a list of plain `SearchRequest`s, each with its own filters. `SearchManyResponse.responses` holds one `SearchResponse` per request, in request order. The server fans a batch out over a pool of `JUDITHA_RPC_WORKERS` threads (separate from the request pool); tantivy releases the GIL while searching, so one batch uses several cores.
 - `Result.common_schema` and `Result.caption` are computed by the server. The python client ignores them and recomputes locally via [rigour](https://github.com/opensanctions/rigour) and [followthemoney](https://followthemoney.tech); other clients can use them as-is. An empty `caption` means there was no name to pick.
 - `Result.took` is measured server-side in milliseconds and does not include network time.
 - `Mention.schema` matches the JSON field name of `juditha.model.Mention` (the python attribute is `schema_`).

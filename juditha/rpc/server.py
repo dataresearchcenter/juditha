@@ -22,8 +22,13 @@ log = get_logger(__name__)
 
 
 class JudithaServicer(pb_grpc.JudithaServicer):
-    def __init__(self, store: BaseStore) -> None:
+    def __init__(self, store: BaseStore, workers: int) -> None:
         self.store = store
+        # Fans a `SearchMany` batch out over threads. Separate from the gRPC
+        # request pool, whose threads would otherwise wait on themselves.
+        # tantivy releases the GIL while searching, and the fuzzy clauses are
+        # most of a search's cost, so a batch scales with this pool.
+        self.batch_pool = futures.ThreadPoolExecutor(max_workers=workers)
 
     def Search(
         self, request: pb.SearchRequest, context: grpc.ServicerContext
@@ -33,10 +38,9 @@ class JudithaServicer(pb_grpc.JudithaServicer):
     def SearchMany(
         self, request: pb.SearchManyRequest, context: grpc.ServicerContext
     ) -> pb.SearchManyResponse:
-        # Sequential on purpose: one batch is one worker thread, and the
-        # search path holds the GIL for most of its time anyway.
+        # `map` keeps request order.
         return pb.SearchManyResponse(
-            responses=[self._search(r) for r in request.requests]
+            responses=list(self.batch_pool.map(self._search, request.requests))
         )
 
     def _search(self, request: pb.SearchRequest) -> pb.SearchResponse:
@@ -80,7 +84,7 @@ def make_server(
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=workers), options=channel_options()
     )
-    pb_grpc.add_JudithaServicer_to_server(JudithaServicer(store), server)
+    pb_grpc.add_JudithaServicer_to_server(JudithaServicer(store, workers), server)
     return server, server.add_insecure_port(f"{host}:{port}")
 
 
