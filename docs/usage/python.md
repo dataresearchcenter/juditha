@@ -52,7 +52,7 @@ store = get_store("/var/lib/juditha") # explicit path
 store = get_store("grpc://juditha:50051")  # remote, see the gRPC api page
 ```
 
-`get_store` resolves the URI at call time and caches one store per resolved URI. A `grpc://` URI yields an `ApiStore` that proxies to a [remote server](api.md), anything else a local `Store` reading the tantivy index and the Aho-Corasick automaton.
+`get_store` caches one store per resolved URI; without an argument it uses `settings.uri`. A `grpc://` URI yields an `ApiStore` that proxies to a [remote server](api.md), anything else a local `Store` reading the tantivy index and the Aho-Corasick automaton.
 
 The methods you will use most:
 

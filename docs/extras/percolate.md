@@ -59,7 +59,7 @@ The whole second-stage in-memory index lives only for the duration of the percol
 
 ## Tuning
 
-`percolate_block_limit` (env `JUDITHA_PERCOLATE_BLOCK_LIMIT`, default `10_000`) caps the BM25-ranked candidate pool returned by the first stage. With `percolate_min_should_match >= 2` the blocking stage drops most noise candidates before BM25, so the cap rarely binds; for extremely long inputs against multi-million-cluster corpora you may still want to raise it. The cap is read from `Settings()` on every `percolate()` call, so env-var changes take effect without restart.
+`percolate_block_limit` (env `JUDITHA_PERCOLATE_BLOCK_LIMIT`, default `10_000`) caps the BM25-ranked candidate pool returned by the first stage. With `percolate_min_should_match >= 2` the blocking stage drops most noise candidates before BM25, so the cap rarely binds; for extremely long inputs against multi-million-cluster corpora you may still want to raise it.
 
 `percolate_min_should_match` (env `JUDITHA_PERCOLATE_MIN_SHOULD_MATCH`, default `2`) sets `minimum_number_should_match` on the blocking `boolean_query`. Default `2` is recall-safe by construction: percolatable names need `>= MIN_TOKEN_COUNT == 2` tokens to be considered, and the `tokens` field carries every token, so every percolatable doc contributes >= 2 tokens to the index.
 

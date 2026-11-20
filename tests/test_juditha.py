@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 
 from juditha import io
 from juditha.cli import cli
+from juditha.settings import settings
 from juditha.store import get_build_store, get_store, lookup
 
 runner = CliRunner()
@@ -16,7 +17,7 @@ def loaded_store(fixtures_path, tmp_path, monkeypatch):
     """Store with EU authorities loaded and built."""
     get_store.cache_clear()
     get_build_store.cache_clear()
-    monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
+    monkeypatch.setattr(settings, "uri", str(tmp_path / "juditha"))
     store = get_build_store()
     io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
     store.build()
@@ -127,12 +128,12 @@ def test_lookup_best_match(store):
 
 
 def test_juditha_cli(monkeypatch, fixtures_path: Path, tmp_path):
-    # Need to clear cache to pick up new env var
+    # Need to clear cache to pick up the new uri
     get_store.cache_clear()
     get_build_store.cache_clear()
     lookup.cache_clear()
-    # Set env var
-    monkeypatch.setenv("JUDITHA_URI", tmp_path)
+    # Point the default store at tmp_path
+    monkeypatch.setattr(settings, "uri", str(tmp_path))
 
     # Run CLI commands
     # Note: Each invoke creates/reuses a cached Store with the same LevelDB connection
@@ -158,8 +159,26 @@ def test_juditha_cli(monkeypatch, fixtures_path: Path, tmp_path):
 
 
 def test_store_env(monkeypatch, tmp_path):
-    # Need to clear cache to pick up new env var
+    # Need to clear cache to pick up the new uri
     get_store.cache_clear()
-    monkeypatch.setenv("JUDITHA_URI", tmp_path)
+    monkeypatch.setattr(settings, "uri", str(tmp_path))
     store = get_store()
     assert store.uri == str(tmp_path)
+
+
+def test_cli_build_automaton(fixtures_path, tmp_path, monkeypatch):
+    get_store.cache_clear()
+    get_build_store.cache_clear()
+    uri = tmp_path / "juditha"
+    monkeypatch.setattr(settings, "uri", str(uri))
+    io.load_proxies(fixtures_path / "eu_authorities.ftm.json", get_build_store())
+    automaton = uri / "automaton.txt"
+    assert not automaton.exists()
+
+    res = runner.invoke(cli, ["build-automaton"])
+    assert res.exit_code == 0, res.output
+    assert automaton.exists()
+    # the index is not built, only the automaton
+    assert get_store().search("European Parliament") is None
+    mentions = get_store().extract("The European Parliament met today.")
+    assert "European Parliament" in {m.text for m in mentions}

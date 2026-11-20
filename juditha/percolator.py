@@ -36,7 +36,7 @@ import tantivy
 
 from juditha.model import Mention, get_common_schema
 from juditha.normalizer import tokenize, tokenize_forms
-from juditha.settings import Settings
+from juditha.settings import settings
 
 # Percolator tuning lives on `Settings`: `percolate_block_limit` caps
 # the BM25 candidate pool (env `JUDITHA_PERCOLATE_BLOCK_LIMIT`) and
@@ -164,8 +164,6 @@ def percolate(
         return []
     text_forms = [t.form for t in text_tokens]
     blocking_set = {f for f in text_forms if len(f) >= MIN_TOKEN_CHARS}
-    # Read settings at call time so env-var changes apply without restart.
-    settings = Settings()
     # Need at least `percolate_min_should_match` input tokens for any
     # candidate to clear the blocking MSM cut, so short-circuit before
     # hitting tantivy.

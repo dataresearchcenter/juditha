@@ -9,7 +9,7 @@ from juditha.model import Mention, Result
 from juditha.rpc import juditha_pb2 as pb
 from juditha.rpc import juditha_pb2_grpc as pb_grpc
 from juditha.rpc.convert import from_pb_mention, from_pb_result
-from juditha.settings import Settings
+from juditha.settings import settings
 from juditha.store import GRPC_SCHEME, BaseStore
 
 log = get_logger(__name__)
@@ -22,7 +22,7 @@ def channel_options() -> list[tuple[str, int]]:
     whole documents as input and can return a mention per name on a
     multi-million-name corpus.
     """
-    length = Settings().rpc_max_message_length
+    length = settings.rpc_max_message_length
     return [
         ("grpc.max_send_message_length", length),
         ("grpc.max_receive_message_length", length),
@@ -96,7 +96,7 @@ class ApiStore(BaseStore):
         unique = list(dict.fromkeys(queries))
         schemata = sorted(schemata) if schemata else None
         topics = sorted(topics) if topics else None
-        size = max(1, Settings().rpc_batch_size)
+        size = max(1, settings.rpc_batch_size)
         found: dict[str, Result | None] = {}
         for i in range(0, len(unique), size):
             chunk = unique[i : i + size]

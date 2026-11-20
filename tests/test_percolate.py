@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 
 from juditha import io
 from juditha.cli import cli
+from juditha.settings import settings
 from juditha.store import get_build_store, get_store
 
 runner = CliRunner()
@@ -136,7 +137,7 @@ def test_cli_percolate(monkeypatch, fixtures_path: Path, tmp_path):
     """`juditha percolate` reads stdin/file, writes mentions to stdout."""
     get_store.cache_clear()
     get_build_store.cache_clear()
-    monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
+    monkeypatch.setattr(settings, "uri", str(tmp_path / "juditha"))
     store = get_build_store()
     io.load_proxies(fixtures_path / "eu_authorities.ftm.json", store)
     store.build()
@@ -224,7 +225,7 @@ def test_cli_percolate_slop(monkeypatch, tmp_path):
     """`juditha percolate --slop 1` finds "Jane M. Doe" for stored "Jane Doe"."""
     get_store.cache_clear()
     get_build_store.cache_clear()
-    monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
+    monkeypatch.setattr(settings, "uri", str(tmp_path / "juditha"))
     store = get_build_store()
     entity = make_entity(
         {

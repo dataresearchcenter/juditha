@@ -19,7 +19,7 @@ from anystore.util import Took
 
 from juditha.model import Doc, Mention, get_common_schema
 from juditha.normalizer import tokenize
-from juditha.settings import Settings
+from juditha.settings import settings
 
 log = get_logger(__name__)
 
@@ -58,6 +58,9 @@ def _normalize_for_extraction(name: str) -> str:
 # Kiel") could never start, since leftmost-longest matches don't overlap.
 TOKEN_SEP = "  "
 
+# Per-pattern build state: (schemata, topics) unioned over its docs.
+_Meta = tuple[frozenset[str], frozenset[str]]
+
 
 def _build_automaton(patterns: list[str]) -> ahocorasick_rs.AhoCorasick:
     """Build Aho-Corasick automaton with whitespace-wrapped patterns.
@@ -66,10 +69,13 @@ def _build_automaton(patterns: list[str]) -> ahocorasick_rs.AhoCorasick:
     automaton only matches at token boundaries in whitespace-padded text;
     its inner single spaces become `TOKEN_SEP` to line up with the text.
     """
-    wrapped = [f" {p.replace(' ', TOKEN_SEP)} " for p in patterns]
+    # generator: no second in-memory copy of all patterns
+    wrapped = (f" {p.replace(' ', TOKEN_SEP)} " for p in patterns)
+    # store_patterns=False: `extract` only needs match indexes
     return ahocorasick_rs.AhoCorasick(
         wrapped,
         matchkind=ahocorasick_rs.MATCHKIND_LEFTMOST_LONGEST,
+        store_patterns=False,
     )
 
 
@@ -83,10 +89,13 @@ class AhoExtractor:
         self._pattern_schema: list[str] = []
         # pattern index -> union of FTM topics across the docs carrying it
         self._pattern_topics: list[tuple[str, ...]] = []
-        # Temporary state for incremental building
-        self._pattern_docs: dict[str, set[int]] = {}
-        self._doc_schemata: list[set[str]] = []
-        self._doc_topics: list[set[str]] = []
+        # Temporary state for incremental building: pattern -> meta,
+        # interned via `_meta` (few distinct combinations)
+        self._pattern_meta: dict[str, _Meta] = {}
+        self._meta: dict[_Meta, _Meta] = {}
+
+    def _intern(self, meta: _Meta) -> _Meta:
+        return self._meta.setdefault(meta, meta)
 
     def build(self, docs: Iterable[Doc]) -> None:
         """Build the automaton from an iterable of Docs (convenience wrapper)."""
@@ -95,45 +104,51 @@ class AhoExtractor:
         self.finalize()
 
     def add_doc(self, idx: int, doc: Doc) -> None:
-        """Add a single doc during incremental build."""
-        self._doc_schemata.append(doc.schemata)
-        self._doc_topics.append(doc.topics)
-        # Derive the per-pattern floor from the shared min_token_length
-        # setting on every call. Settings() reads env vars; for build
-        # loops the cost is dominated by tokenization anyway.
+        """Add a single doc during incremental build (`idx` is unused)."""
+        doc_meta = self._intern((frozenset(doc.schemata), frozenset(doc.topics)))
+        # Derive the per-pattern floor from the shared min_token_length setting.
         min_tokens = 1 if ADDRESS_SCHEMA in doc.schemata else MIN_TOKEN_COUNT
-        min_pattern_length = Settings().min_token_length * min_tokens
+        min_pattern_length = settings.min_token_length * min_tokens
         for name in doc.names | doc.aliases:
             norm = _normalize_for_extraction(name)
             tokens = norm.split()
             if len(tokens) >= min_tokens and len(norm) >= min_pattern_length:
-                if norm not in self._pattern_docs:
-                    self._pattern_docs[norm] = set()
-                self._pattern_docs[norm].add(idx)
+                meta = self._pattern_meta.get(norm)
+                if meta is None:
+                    self._pattern_meta[norm] = doc_meta
+                elif meta is not doc_meta:
+                    self._pattern_meta[norm] = self._intern(
+                        (meta[0] | doc_meta[0], meta[1] | doc_meta[1])
+                    )
 
     def finalize(self) -> None:
         """Finalize the automaton after all docs have been added."""
         with Took() as t:
-            patterns = sorted(self._pattern_docs)
+            patterns = sorted(self._pattern_meta)
             log.info("Finalizing extraction patterns ...", patterns=len(patterns))
 
             # Resolve schema and topics per pattern from collected doc state.
             # Schemata reduce to their common ancestor; topics are unioned,
             # a shared name is flagged if any cluster carrying it is.
-            pattern_schema: list[str] = []
-            pattern_topics: list[tuple[str, ...]] = []
-            for pattern in patterns:
-                doc_indices = self._pattern_docs[pattern]
-                all_schemata: set[str] = set()
-                all_topics: set[str] = set()
-                for idx in doc_indices:
-                    all_schemata.update(self._doc_schemata[idx])
-                    all_topics.update(self._doc_topics[idx])
+            # Resolved once per distinct (schemata, topics) combination.
+            resolved: dict[_Meta, tuple[str, tuple[str, ...]]] = {}
+            for meta in self._meta:
+                all_schemata, all_topics = meta
                 schema = (
                     get_common_schema(*all_schemata) if all_schemata else "LegalEntity"
                 )
+                resolved[meta] = (schema, tuple(sorted(all_topics)))
+            pattern_schema: list[str] = []
+            pattern_topics: list[tuple[str, ...]] = []
+            for pattern in patterns:
+                schema, topics = resolved[self._pattern_meta[pattern]]
                 pattern_schema.append(schema)
-                pattern_topics.append(tuple(sorted(all_topics)))
+                pattern_topics.append(topics)
+
+            # Free temporary build state before building the automaton (peak memory)
+            self._pattern_meta = {}
+            self._meta = {}
+            del resolved
 
             self._patterns = patterns
             self._pattern_schema = pattern_schema
@@ -141,11 +156,6 @@ class AhoExtractor:
 
             log.info("Building Aho-Corasick automaton ...", patterns=len(patterns))
             self._ac = _build_automaton(patterns)
-
-            # Free temporary build state
-            self._pattern_docs = {}
-            self._doc_schemata = []
-            self._doc_topics = []
         log.info("Aho-Corasick automaton built.", took=t.took.seconds)
 
     def save(self, path: Path) -> None:

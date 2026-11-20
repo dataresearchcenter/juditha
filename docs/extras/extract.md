@@ -52,7 +52,7 @@ for m in mentions:
 
 The automaton is persisted alongside the tantivy index as `automaton.txt` (tab-delimited `pattern<TAB>schema` per line). The first `extract` call after a process start loads it from disk; subsequent calls reuse the in-memory automaton.
 
-`juditha build` regenerates this file in the same pass that rebuilds the tantivy index.
+`juditha build` regenerates this file in the same pass that rebuilds the tantivy index. `juditha build-automaton` regenerates only this file and leaves the index as it is.
 
 ## Limits
 

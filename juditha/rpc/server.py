@@ -15,7 +15,7 @@ from juditha.rpc import juditha_pb2 as pb
 from juditha.rpc import juditha_pb2_grpc as pb_grpc
 from juditha.rpc.client import channel_options
 from juditha.rpc.convert import to_pb_mention, to_pb_result
-from juditha.settings import Settings
+from juditha.settings import settings
 from juditha.store import BaseStore, get_store
 
 log = get_logger(__name__)
@@ -95,7 +95,6 @@ def serve(
     workers: int | None = None,
 ) -> None:
     """Serve the store at `uri` over gRPC until the process is terminated."""
-    settings = Settings()
     host = host if host is not None else settings.rpc_host
     port = port if port is not None else settings.rpc_port
     workers = workers if workers is not None else settings.rpc_workers

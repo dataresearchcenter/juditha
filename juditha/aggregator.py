@@ -16,7 +16,7 @@ from rigour.names import pick_name
 from juditha.model import Doc, Docs
 from juditha.normalizer import name_key as n
 from juditha.patch import get_patches, patch_entity
-from juditha.settings import Settings
+from juditha.settings import settings
 
 log = get_logger(__name__)
 
@@ -75,7 +75,7 @@ class Aggregator:
         self.buffer: list[EntityProxy] = []
         # Load-time data patches (`JUDITHA_PATCHES`), resolved once per
         # aggregator so `put` doesn't re-read settings for every entity.
-        self.patches = get_patches(Settings().patches)
+        self.patches = get_patches(settings.patches)
         # Open LevelDB (creates if doesn't exist)
         self.db = plyvel.DB(self.uri, create_if_missing=True)
 

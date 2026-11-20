@@ -11,7 +11,7 @@ Settings management is handled via [pydantic-settings](https://pydantic.dev/docs
 | Field | `uri` |
 | Type | `str` |
 | Default | `juditha.db` |
-| Read at | every `get_store()` call (resolved at call time) |
+| Read at | every `get_store()` / `get_build_store()` call without a `uri` |
 | Rebuild needed | n/a (it selects which store to open) |
 
 Path to the store directory. Holds the LevelDB aggregator (`names.db/`), the tantivy index (`tantivy.db/`), and the Aho-Corasick patterns file (`automaton.txt`). Supports any anystore-resolvable path: local filesystem, S3, ...

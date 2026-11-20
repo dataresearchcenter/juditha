@@ -19,7 +19,7 @@ from followthemoney import EntityProxy
 from ftmq.util import make_entity
 
 from juditha.extraction import _normalize_for_extraction
-from juditha.settings import Settings
+from juditha.settings import settings
 
 GEONAMES_DUMP_URI = "https://download.geonames.org/export/dump/allCountries.zip"
 
@@ -245,7 +245,7 @@ def make_address(row: dict[str, str], variants: list[str]) -> EntityProxy:
 
 def iter_entities(uri: Uri) -> Generator[EntityProxy, None, None]:
     """One `Address` entity per surviving GeoNames row."""
-    min_alternate_length = Settings().geonames_min_alternate_length
+    min_alternate_length = settings.geonames_min_alternate_length
     for row in iter_rows(uri):
         variants = select_variants(row, min_alternate_length)
         if variants:

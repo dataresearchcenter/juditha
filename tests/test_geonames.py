@@ -10,6 +10,7 @@ from juditha import geonames, io
 from juditha.cli import cli
 from juditha.normalizer import name_key
 from juditha.rpc.server import make_server
+from juditha.settings import settings
 from juditha.store import Store, get_build_store, get_store, lookup
 
 TEXT = "I just visited Sant Julia de loria last week, then Berlin."
@@ -201,7 +202,7 @@ def test_geonames_cli(fixtures_path, tmp_path, monkeypatch):
     get_store.cache_clear()
     get_build_store.cache_clear()
     lookup.cache_clear()
-    monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
+    monkeypatch.setattr(settings, "uri", str(tmp_path / "juditha"))
     runner = CliRunner()
     res = runner.invoke(
         cli, ["load-geonames", "-i", str(fixtures_path / "geonames.txt")]

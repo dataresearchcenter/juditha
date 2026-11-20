@@ -3,6 +3,7 @@ import pytest
 from juditha import io
 from juditha.rpc.client import ApiStore
 from juditha.rpc.server import make_server
+from juditha.settings import settings
 from juditha.store import Store, get_build_store, get_store
 
 TEXT = "The European Parliament met the European Commission today."
@@ -130,8 +131,8 @@ def test_rpc_search_many_parity(served, monkeypatch):
     expected = [local.search(q) for q in queries]
     assert expected[0] is not None and expected[1] is None
     # chunk size 1 forces one round trip per unique query
-    for size in ("1", "10000"):
-        monkeypatch.setenv("JUDITHA_RPC_BATCH_SIZE", size)
+    for size in (1, 10000):
+        monkeypatch.setattr(settings, "rpc_batch_size", size)
         results = remote.search_many(queries)
         assert [r and unpack(r) for r in results] == [e and unpack(e) for e in expected]
     assert [r and unpack(r) for r in local.search_many(queries)] == [

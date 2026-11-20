@@ -8,10 +8,8 @@ from rich import print
 
 from juditha import __version__, geonames, io
 from juditha.rpc.server import serve
-from juditha.settings import Settings
+from juditha.settings import settings
 from juditha.store import get_build_store, get_store, lookup
-
-settings = Settings()
 
 cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=settings.debug)
 
@@ -19,15 +17,16 @@ cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=settings.debug)
 @cli.callback(invoke_without_command=True)
 def cli_juditha(
     version: Annotated[Optional[bool], typer.Option(..., help="Show version")] = False,
-    settings: Annotated[
-        Optional[bool], typer.Option(..., help="Show current settings")
+    show_settings: Annotated[
+        Optional[bool],
+        typer.Option("--settings/--no-settings", help="Show current settings"),
     ] = False,
 ):
     if version:
         print(__version__)
         raise typer.Exit()
-    if settings:
-        print(Settings())
+    if show_settings:
+        print(settings)
         raise typer.Exit()
     configure_logging()
 
@@ -170,6 +169,14 @@ def cli_build():
     with ErrorHandler():
         store = get_build_store()
         store.build()
+
+
+@cli.command("build-automaton")
+def cli_build_automaton() -> None:
+    """Build only the extraction automaton from loaded data (keeps the index)."""
+    with ErrorHandler():
+        store = get_build_store()
+        store.build_automaton()
 
 
 @cli.command("serve")

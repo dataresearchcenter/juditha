@@ -5,6 +5,7 @@ from ftmq.util import make_entity
 
 from juditha import io
 from juditha.patch import get_patches, patch_entity
+from juditha.settings import settings
 from juditha.store import get_build_store, get_store
 
 
@@ -49,7 +50,7 @@ def test_patch_no_patches():
 def test_patch_on_load(fixtures_path, tmp_path, monkeypatch):
     get_store.cache_clear()
     get_build_store.cache_clear()
-    monkeypatch.setenv("JUDITHA_PATCHES", str(fixtures_path / "patches.yml"))
+    monkeypatch.setattr(settings, "patches", str(fixtures_path / "patches.yml"))
     store = get_build_store(str(tmp_path / "juditha"))
     # every loader goes through Aggregator.put: plain names ...
     names = tmp_path / "names.txt"

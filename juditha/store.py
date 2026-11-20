@@ -54,7 +54,7 @@ from juditha.extraction import AhoExtractor
 from juditha.model import Doc, Mention, Result
 from juditha.normalizer import name_key, tokenize_forms
 from juditha.percolator import MIN_TOKEN_CHARS, percolate
-from juditha.settings import Settings
+from juditha.settings import settings
 
 NUM_CPU = multiprocessing.cpu_count()
 INDEX = "tantivy.db"
@@ -65,7 +65,6 @@ GRPC_SCHEME = "grpc://"
 
 
 log = get_logger(__name__)
-settings = Settings()
 
 
 @cache
@@ -534,6 +533,22 @@ class BuildStore(Store):
         # read registry — those stores are cheap to recreate lazily.
         _store_for_uri.cache_clear()
 
+    def build_automaton(self) -> None:
+        """Rebuild only the AhoExtractor from the aggregator, keep the index."""
+        self._extractor = AhoExtractor()
+        self._extractor.build(
+            logged_items(
+                self.aggregator,
+                "Building automaton",
+                item_name="Doc",
+                logger=log,
+                total=self.aggregator.count,
+            )
+        )
+        self._extractor.save(path_from_uri(self.uri) / AHO)
+        # cached read Stores hold the old automaton
+        _store_for_uri.cache_clear()
+
     def close(self) -> None:
         """Flush pending writes and release tantivy writer + LevelDB handles.
 
@@ -572,11 +587,9 @@ def get_store(uri: Uri | None = None) -> BaseStore:
     here: `path_from_uri` happily turns `grpc://host:50051` into the local
     path `/host:50051` instead of raising.
 
-    Unlike a direct `@cache` decorator, this resolves None against the
-    current `Settings()` *at call time*, so changes to `JUDITHA_URI`
-    between calls pick up the new URI without needing `cache_clear()`.
+    `uri=None` resolves to `settings.uri`.
     """
-    return _store_for_uri(str(uri) if uri is not None else Settings().uri)
+    return _store_for_uri(str(uri) if uri is not None else settings.uri)
 
 
 # Backward-compat alias for code (and tests) that calls
@@ -600,7 +613,7 @@ def get_build_store(uri: Uri | None = None) -> BuildStore:
     Loading and building are local-only, so a remote URI is an error here
     rather than something to proxy.
     """
-    uri = str(uri) if uri is not None else Settings().uri
+    uri = str(uri) if uri is not None else settings.uri
     if uri.startswith(GRPC_SCHEME):
         raise ValueError(f"Cannot build or write to a remote store: `{uri}`")
     return _build_store_for_uri(uri)

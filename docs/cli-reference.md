@@ -100,6 +100,16 @@ juditha build [OPTIONS]
 
 No options beyond `--help`.
 
+## build-automaton
+
+Rebuild only the Aho-Corasick extractor (`automaton.txt`) from the aggregator, leaving the tantivy index untouched. Useful after changing a setting that only affects extraction, such as `JUDITHA_MIN_TOKEN_LENGTH`.
+
+```text
+juditha build-automaton [OPTIONS]
+```
+
+No options beyond `--help`.
+
 ## lookup
 
 Single-best-match search of the names index.

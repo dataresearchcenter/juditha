@@ -9,6 +9,7 @@ from juditha.cli import cli
 from juditha.extraction import AhoExtractor
 from juditha.normalizer import name_key
 from juditha.rpc.server import make_server
+from juditha.settings import settings
 from juditha.store import Store, get_build_store, get_store, lookup
 
 TEXT = (
@@ -79,7 +80,7 @@ def test_topics_cli_filters(fixtures_path, tmp_path, monkeypatch):
     get_store.cache_clear()
     get_build_store.cache_clear()
     lookup.cache_clear()
-    monkeypatch.setenv("JUDITHA_URI", str(tmp_path / "juditha"))
+    monkeypatch.setattr(settings, "uri", str(tmp_path / "juditha"))
     runner = CliRunner()
     runner.invoke(cli, ["load-entities", "-i", str(fixtures_path / "topics.ftm.json")])
     runner.invoke(cli, ["build"])
