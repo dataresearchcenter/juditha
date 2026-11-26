@@ -165,7 +165,7 @@ JUDITHA_URI=grpc://localhost:50051 juditha lookup "Jane Doe"
 
 Runtime:
 - `tantivy` (≥ 0.26): full-text search index (mmap, FuzzyTermQuery, phrase_query)
-- `followthemoney` (≥ 4.10.2) / `ftmq[level]`: FTM entity model + LevelDB-backed querying. `ftmq` is currently pinned to the git branch `dataresearchcenter/ftmq@refactor/ql`, not a PyPI release – `juditha.io` builds its filter with the new `ftmq.Query` / `ftmq.M` API.
+- `followthemoney` (≥ 4.10.2) / `ftmq[level]`: FTM entity model + LevelDB-backed querying. `ftmq` (≥ 5.3.1, PyPI) – `juditha.io` builds its filter with the `ftmq.Query` / `ftmq.M` API.
 - `rigour` (≥ 2.3.1): name parsing, normalization, phonetics, symbols
 - `anystore`: URI-based I/O abstraction
 - `rapidfuzz` / `jellyfish`: string similarity scoring (rerank stage)

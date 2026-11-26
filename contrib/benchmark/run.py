@@ -17,7 +17,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
@@ -55,14 +54,14 @@ def ensure_names(names_path: Path) -> Path:
 def time_import() -> tuple[float, object, object]:
     """Time the import of the juditha public surface used here.
 
-    Returns (elapsed_seconds, get_store, io_module).
+    Returns (elapsed_seconds, get_build_store, io_module).
     """
     t = time.perf_counter()
-    from juditha import get_store as _get_store
+    from juditha import get_build_store as _get_build_store
     from juditha import io as _io
 
     elapsed = time.perf_counter() - t
-    return elapsed, _get_store, _io
+    return elapsed, _get_build_store, _io
 
 
 def ensure_store(
@@ -76,9 +75,7 @@ def ensure_store(
 
     Elapsed is zero if the store was already populated and not forced.
     """
-    os.environ["JUDITHA_URI"] = str(store_uri)
-    get_store.cache_clear()
-    store = get_store()
+    store = get_store(store_uri)
 
     count = store.aggregator.count
     if count > 0 and not force:
@@ -161,6 +158,12 @@ def main() -> int:
     )
     if build_t > 0:
         print(f"build total: {_hms(build_t)}")
+    # Query through a fresh read-only Store, as a worker process would: the
+    # BuildStore still holds the automaton it just built, so the warmup
+    # below would measure nothing.
+    from juditha import get_store
+
+    store = get_store(store_uri)
 
     text = args.text.read_text(encoding="utf-8")
     print()
