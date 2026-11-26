@@ -2,43 +2,48 @@
 
 [[package]]
 name = "ahocorasick-rs"
-version = "1.0.3"
+version = "1.0.4"
 description = "Search for multiple substrings at the same time, and quickly too"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "ahocorasick_rs-1.0.3-cp310-cp310-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:b81c0eac05bfad790a6aa188af0ab42a884af66c663df9f23556210cbf7c34ec"},
-    {file = "ahocorasick_rs-1.0.3-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:704a6cd7718dd5ca5ca968bff586c40c773894707ae82f9fb49f07613d29bef8"},
-    {file = "ahocorasick_rs-1.0.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1c1d768d98dbf2117bb07b8757a2b7ca579a5d7fd09510b093b7df2748754837"},
-    {file = "ahocorasick_rs-1.0.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0c9b5918fa9b691ae8514018abc92053535857726e2de2fa08ea67a22ec81c96"},
-    {file = "ahocorasick_rs-1.0.3-cp310-cp310-win_amd64.whl", hash = "sha256:7f1ad589ee6bcb89ec05129a2d89eb088da1d6ffb526c779b4b289bee82c3b25"},
-    {file = "ahocorasick_rs-1.0.3-cp311-cp311-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:6d8ebb2b52a73feaf8be8e6d3b8badcd49986093bbb33945a42f053d4f8fe843"},
-    {file = "ahocorasick_rs-1.0.3-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:8b7fcd55c87b07634f19f6992152f284b69d76fc03effd573921801678ce54d0"},
-    {file = "ahocorasick_rs-1.0.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ab2ef82253f4c784ca3c06d401fec95e4635b1b6d38e502435a92f87e7f0bd5c"},
-    {file = "ahocorasick_rs-1.0.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3bb732943ee5b8d56fb1a46cde6a0a1ad0fb7bb09d9897d88df89007d1770779"},
-    {file = "ahocorasick_rs-1.0.3-cp311-cp311-win_amd64.whl", hash = "sha256:4fd2f2a8fd81eff649daaceaa879a378efc02f7d77e025b8478d7de5a2de82dd"},
-    {file = "ahocorasick_rs-1.0.3-cp312-cp312-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:42bc695d5a66aeede5ac03d659ec8c4a3a6316aa74ce06d436aec7ed73def328"},
-    {file = "ahocorasick_rs-1.0.3-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:ea84b6b981735bca543d7357adcc9ccc663b23fc1d717e5467345a0db5d1419f"},
-    {file = "ahocorasick_rs-1.0.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1afbc0464ba72d8fba070665421fab26567de6df46660da7e88afdd7ebed9927"},
-    {file = "ahocorasick_rs-1.0.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e9f1c56b595c50a9ebd4824995795f4c8627c4c8a5bc7c7d5489fe2cb80d5123"},
-    {file = "ahocorasick_rs-1.0.3-cp312-cp312-win_amd64.whl", hash = "sha256:1322deee3651d2f00528c8c3b81f2797b8390c4f753ada4d909281a0895a2499"},
-    {file = "ahocorasick_rs-1.0.3-cp313-cp313-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:9d57e2722df47694215274c8fd7116b22b21d374fb67ed61c87b5dfaecbd2a4d"},
-    {file = "ahocorasick_rs-1.0.3-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:8f138232cbb2edde8afed9815022bc011f82f4211b6a98370d4b379644bf8e1a"},
-    {file = "ahocorasick_rs-1.0.3-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:09c4f94c2cc85f94cb4c75da24f3fb242cf382af4cb87022d1c3831580d5cb22"},
-    {file = "ahocorasick_rs-1.0.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a034948a591749ae3dd8ba8d27cf13383a4c1831796c647e9bedcecda3d7e5dd"},
-    {file = "ahocorasick_rs-1.0.3-cp313-cp313-win_amd64.whl", hash = "sha256:29b980c1b4ff10027d8f8cccea2b3583ff3d96741c7a177dc55085a6e8bf1035"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:06046d2aa4e0b15fb7aaefd7e26246d819c72ca7418ec3a6f98239f6a09ef462"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:071bf6929795a22454aeffbf6261076e0dd4a8f449e2fafe1faa19846056d3e7"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9ea87a5daef701586fcb20835a001659240f5bff637408209db5d9d09378b6f6"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9c7b53e81c875551ae491206ece0f11b8c1bc7a1f45975c9674e0e216d35e4cf"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314-win_amd64.whl", hash = "sha256:8c5266fbc53efb9672e58ec5605faa1e13439a8d7f66333f92621b8a89739871"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314t-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:bc8267a6dd67f10dfa30f0d87ec161b4b319383b6c0ddb0b56395160d6d8ec09"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314t-macosx_10_12_x86_64.whl", hash = "sha256:ea296b40a730d85b13d20cf59a59eefcfdbf0a3b921743bba6578127dba68903"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a9f5b78d608098ff51a567941c8bf3c0d511643bf102c72ef9b1aad88679817d"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b995ab3426f4835a9afc2145990e8234ec93e09d81557c1525bd33d55891665b"},
-    {file = "ahocorasick_rs-1.0.3-cp314-cp314t-win_amd64.whl", hash = "sha256:c1ba1ade1e260c5b6772f7f3857dabaf78bd44813c71923cbb4b00b82e50b7a1"},
-    {file = "ahocorasick_rs-1.0.3.tar.gz", hash = "sha256:579d37070a7c21da9cd9988b9fb471297273b60cb4126586d6dcd99faafc5ca5"},
+    {file = "ahocorasick_rs-1.0.4-cp311-cp311-macosx_10_12_universal2.macosx_10_12_x86_64.macosx_11_0_arm64.whl", hash = "sha256:ef5236e8a217d6acd63146bd6fa9c65b0d918ec91875f08efd368f14d2a73381"},
+    {file = "ahocorasick_rs-1.0.4-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:264c5afcf5db2a65fc62e7223b3b505fe9be42b91e8be7df80ef42a9934f1edb"},
+    {file = "ahocorasick_rs-1.0.4-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:a07a125c37e64d4218aae17f476103fb53d233679cb11d36b3d7af7d13c2786a"},
+    {file = "ahocorasick_rs-1.0.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:d36c0b54732c2ed594326cd5d669b2a2e7072833c92204cc22e20fd0709c60ce"},
+    {file = "ahocorasick_rs-1.0.4-cp311-cp311-win_amd64.whl", hash = "sha256:f0737cdc02b27ec21540422d6a89a33fb0495d9b64fd2fac597de35bba66132e"},
+    {file = "ahocorasick_rs-1.0.4-cp312-cp312-macosx_10_12_universal2.macosx_10_12_x86_64.macosx_11_0_arm64.whl", hash = "sha256:b236aae246c95fad367ce3b234f6cd9216ea2bb7553698fe052857f422e795bf"},
+    {file = "ahocorasick_rs-1.0.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ef9bddb68e12a1b15f620515b211c441fa9ef4380db1cee21c3b4474de5eb62e"},
+    {file = "ahocorasick_rs-1.0.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:79ed585aa4a5d43690c43ba30dba369cc653054e3fbeedea8d21f76eb98e4e96"},
+    {file = "ahocorasick_rs-1.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:fb04bcb52510501b27bbb45baec3de4a5108f79b7111d1c4f4ec6f18b0b2c0fe"},
+    {file = "ahocorasick_rs-1.0.4-cp312-cp312-win_amd64.whl", hash = "sha256:23b27076369b3fe423272b38f75ab416b51127425202a2d954f027614af95195"},
+    {file = "ahocorasick_rs-1.0.4-cp313-cp313-macosx_10_12_universal2.macosx_10_12_x86_64.macosx_11_0_arm64.whl", hash = "sha256:49f6432053e9bdf3511514a44e96594f4f43be390f68d0c3e2e957495864656a"},
+    {file = "ahocorasick_rs-1.0.4-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:26925906e500b50fc2e6d32aaf02dd3c4519be7071cbbc05e9abfa48a9b9236b"},
+    {file = "ahocorasick_rs-1.0.4-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:99768317de40d5dd4aec42a189b8abf77fe11a88bff1a267851cc8640bcc037d"},
+    {file = "ahocorasick_rs-1.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:28cd934928d03656dab7dd3aaf55b9bee43c2f6e657700de085365093a0c41f3"},
+    {file = "ahocorasick_rs-1.0.4-cp313-cp313-win_amd64.whl", hash = "sha256:4006d31b9b58c9c29b75ec4175ffc81c860020ded99737eacbb8cb2844ea7cfa"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314-macosx_10_12_universal2.macosx_10_12_x86_64.macosx_11_0_arm64.whl", hash = "sha256:2231abccacb1352c038067fb474aec4ad43a87599b83428fb929c93b0087f27e"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:b8d6e1921f292e717cbc25b8f3e91dfbe121128f075cbae8d205b93d6413cf80"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:79d1b32d996c02319d6c479f6c27b4f405ba17f2b93facb1db85e5845e10b6ef"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1e6f7af73d7d1b551ce4ad01d6f29f52d7e3fa5be1ad5a419169c3199a8035c3"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314-win_amd64.whl", hash = "sha256:e20d9096efa7239b5af616999447bda3da8257f4609569319702a07020846c51"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314t-macosx_10_12_universal2.macosx_10_12_x86_64.macosx_11_0_arm64.whl", hash = "sha256:9157d4007a8755e161206bba025ba06223355fb81d8f110b557deb43126facec"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:028d360ac302dc4bb2ea546004957ff06e44c4d625e94b1fcd141a50058eecef"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:5d1e1ef9afd8f90560cfe1d3ba17b976a9eb1ff56e82a0b66de85da78e39cb34"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:30b8acb8c016c8bc7f1f110376f52d0b20a6a48b4f0f9165b6151539692053a6"},
+    {file = "ahocorasick_rs-1.0.4-cp314-cp314t-win_amd64.whl", hash = "sha256:21a65f92ff4c8666ee1a36348cf7fba1f5d1c5691c61fd8371413dc8022d4f1f"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315-macosx_10_12_universal2.macosx_10_12_x86_64.macosx_11_0_arm64.whl", hash = "sha256:99e990f9a34dde594cd32b65e0204ac747b6420a496934ada6ecb7a02dde98a4"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315-macosx_11_0_arm64.whl", hash = "sha256:908ddbbdc59de420875b5398d154a13746792c9ea76668f59f6ace6ef9e3a7bf"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:1e46ad90371b32ae70e0c66411d2226e3769e64d78e6979941b08373c9e7aee0"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:9752456265cff9ddfec72e5f85fcda190e5887b67a8b2870fd385b100051e2ff"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315-win_amd64.whl", hash = "sha256:442030ff5690915146f5f103a72e38c9a6b8ce25bd648e5381c1adad9134e662"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315t-macosx_10_12_universal2.macosx_10_12_x86_64.macosx_11_0_arm64.whl", hash = "sha256:b5f36f5ccfb42676ffafc2f10b21fd9982c89718271f72523d5a79a16fd2e4f5"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315t-macosx_11_0_arm64.whl", hash = "sha256:684776a6ab7f6fc0c323ada69f403c5e0705608e2d1f21210eee88d88a361fdf"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:2f0596328bfdebdf0b797aadc9595e77c0e0f287fee9b28b6d499f960029a738"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:8d67f0cbcf134dc2e5c85cf78ecbe8f845c25263e7b8d58b46fed892d0c9e7c5"},
+    {file = "ahocorasick_rs-1.0.4-cp315-cp315t-win_amd64.whl", hash = "sha256:e683f3eed787ea06353f7d63b9e6269f4e58e2867ecc4f9bdcb71ea969eaecc4"},
+    {file = "ahocorasick_rs-1.0.4.tar.gz", hash = "sha256:835e24302e140af54a0073f9ab3131d2d1d830c1ffd709b33b8e1510f492b1d0"},
 ]
 
 [package.dependencies]
@@ -4872,4 +4877,4 @@ geonames = ["wordfreq"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "fc1ec7a4e04bde5cda2250f256d6ca91ee8f4f3568e2cd33b66542cf87b2b4a0"
+content-hash = "ed3082cc34f9316a78771b6a61714ab927e0ed482629cd93fd950905a62519a4"
