@@ -4623,14 +4623,14 @@ files = [
 
 [[package]]
 name = "types-grpcio"
-version = "1.85.0.20261028"
+version = "1.85.0.20261122"
 description = "Typing stubs for grpcio"
 optional = false
 python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "types_grpcio-1.85.0.20261028-py3-none-any.whl", hash = "sha256:2c2684330ae57ab64ffb43183ac652e73d2609024e6076e3e9d2b8ae06816207"},
-    {file = "types_grpcio-1.85.0.20261028.tar.gz", hash = "sha256:4ea4f36a54cf9a62fcb09515f7305e89c01f4edca54b32de24f6b1204b84522c"},
+    {file = "types_grpcio-1.85.0.20261122-py3-none-any.whl", hash = "sha256:8e204a0760dbfa41b0b9066abad584027a032cc5930e13a6a772801771c4b942"},
+    {file = "types_grpcio-1.85.0.20261122.tar.gz", hash = "sha256:2541b5f1093b15649ba6621fa8ebfe18de1c0b6d75c5ebd3529c7d0d359efccf"},
 ]
 
 [[package]]
@@ -4877,4 +4877,4 @@ geonames = ["wordfreq"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "ed3082cc34f9316a78771b6a61714ab927e0ed482629cd93fd950905a62519a4"
+content-hash = "49747e77c545be8819d321fe484f626cd7345c249d3d9233a7ca0f9df74a76fd"
